@@ -5,8 +5,15 @@ import { AUTH_COOKIE } from "@/lib/constants";
 // Edge-safe: verifies the cookie signature only (jose runs on Edge; the DB
 // does not). API routes are excluded from the matcher and enforce their own
 // auth — the Shortcut endpoints must work without a browser cookie.
+// Publicly reachable pages (no PIN): legal pages required for SMS carrier
+// (A2P) vetting — the vetter must be able to load them.
+const PUBLIC_ROUTES = ["/privacy", "/terms"];
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  if (PUBLIC_ROUTES.some((r) => pathname.startsWith(r))) {
+    return NextResponse.next();
+  }
 
   const token = request.cookies.get(AUTH_COOKIE)?.value;
   let authed = false;
