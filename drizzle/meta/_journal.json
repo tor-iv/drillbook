@@ -15,6 +15,13 @@
       "when": 1787849868615,
       "tag": "0001_lowly_lady_ursula",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1787857688148,
+      "tag": "0002_smooth_cargill",
+      "breakpoints": true
     }
   ]
 }

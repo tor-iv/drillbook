@@ -1,7 +1,8 @@
-import { asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { googleConfigured, googleConnected } from "@/lib/google";
 import { GoalEditor } from "@/components/goal-editor";
+import { SmsOptIn } from "@/components/sms-opt-in";
 
 export const dynamic = "force-dynamic";
 
@@ -76,10 +77,18 @@ export default async function SettingsPage({
         </div>
       </section>
 
-      <section>
+      <section className="mb-6">
         <h2 className="font-display mb-2 text-2xl">Phone</h2>
-        <div className="marker-box p-4 text-sm text-pencil">
-          <p>Apple Health sync + evening notification run as iOS Shortcuts — see docs/apple-health-shortcut.md in the repo.</p>
+        <div className="flex flex-col gap-3">
+          <SmsOptIn
+            phone={process.env.NUDGE_SMS_TO ?? "your phone"}
+            initialOptedIn={
+              db.select().from(schema.settings).where(eq(schema.settings.key, "sms_opt_in")).get()?.value === "true"
+            }
+          />
+          <div className="marker-box p-4 text-sm text-pencil">
+            <p>Apple Health sync + evening notification run as iOS Shortcuts — see docs/apple-health-shortcut.md in the repo.</p>
+          </div>
         </div>
       </section>
     </main>

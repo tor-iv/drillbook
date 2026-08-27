@@ -96,3 +96,11 @@ export const cronRuns = sqliteTable("cron_runs", {
   jobKey: text("job_key").primaryKey(),
   lastRunDate: text("last_run_date").notNull(),
 });
+
+// Small KV for user-toggleable settings (e.g. sms_opt_in) — things that are
+// state, not deploy-time env config.
+export const settings = sqliteTable("settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
+});

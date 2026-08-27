@@ -1,7 +1,16 @@
+import { eq } from "drizzle-orm";
+import { db, schema } from "@/db";
+
 // SMS nudges via Twilio's REST API — a plain fetch keeps the dependency
-// count at zero (same reasoning as the hand-rolled Google OAuth). Degrades
-// silently until TWILIO_FROM_NUMBER exists (i.e. a number is bought and
-// A2P-registered).
+// count at zero (same reasoning as the hand-rolled Google OAuth). Sending
+// requires both env config AND the in-app consent toggle (Setup → SMS
+// reminders), which doubles as the documented opt-in for carrier vetting.
+export function smsOptedIn(): boolean {
+  return (
+    db.select().from(schema.settings).where(eq(schema.settings.key, "sms_opt_in")).get()?.value === "true"
+  );
+}
+
 export function smsConfigured(): boolean {
   return !!(
     process.env.TWILIO_ACCOUNT_SID &&
@@ -12,8 +21,8 @@ export function smsConfigured(): boolean {
 }
 
 export async function sendNudgeSms(body: string): Promise<void> {
-  if (!smsConfigured()) {
-    console.log("[sms] not configured — skipping");
+  if (!smsConfigured() || !smsOptedIn()) {
+    console.log("[sms] not configured or not opted in — skipping");
     return;
   }
   const sid = process.env.TWILIO_ACCOUNT_SID!;
