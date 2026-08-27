@@ -4,6 +4,7 @@ import { sendCoachEmail } from "@/lib/email";
 import { localDate } from "@/lib/dates";
 import { googleConnected, upsertDailyEvent } from "@/lib/google";
 import { getDayEnergy } from "@/lib/energy";
+import { sendNudgeSms } from "@/lib/sms";
 import { getTodayStatus } from "@/lib/status";
 import { alreadyRanToday, markRan } from "./guard";
 
@@ -44,10 +45,11 @@ export async function runDailyNudge(force = false): Promise<string> {
 
   db.insert(schema.aiNudges).values({ date: today, kind: "daily", content, model }).run();
 
-  // Email and calendar are independent best-effort deliveries — one failing
-  // must not block the other or the run marker.
+  // Email, SMS, and calendar are independent best-effort deliveries — one
+  // failing must not block the others or the run marker.
   const subject = status.behind ? `Drillbook: you're behind today` : `Drillbook: goals hit`;
   await sendCoachEmail(subject, content).catch((e) => console.error("[daily-nudge] email failed:", e));
+  await sendNudgeSms(content).catch((e) => console.error("[daily-nudge] sms failed:", e));
   if (googleConnected()) {
     await upsertDailyEvent(today, status.summary).catch((e) => console.error("[daily-nudge] calendar failed:", e));
   }
