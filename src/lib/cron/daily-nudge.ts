@@ -5,6 +5,7 @@ import { localDate } from "@/lib/dates";
 import { googleConnected, upsertDailyEvent } from "@/lib/google";
 import { getDayEnergy } from "@/lib/energy";
 import { sendNudgeSms } from "@/lib/sms";
+import { sendOwnerTelegram } from "@/lib/telegram";
 import { getTodayStatus } from "@/lib/status";
 import { alreadyRanToday, markRan } from "./guard";
 
@@ -50,6 +51,7 @@ export async function runDailyNudge(force = false): Promise<string> {
   const subject = status.behind ? `Drillbook: you're behind today` : `Drillbook: goals hit`;
   await sendCoachEmail(subject, content).catch((e) => console.error("[daily-nudge] email failed:", e));
   await sendNudgeSms(content).catch((e) => console.error("[daily-nudge] sms failed:", e));
+  await sendOwnerTelegram(content).catch((e) => console.error("[daily-nudge] telegram failed:", e));
   if (googleConnected()) {
     await upsertDailyEvent(today, status.summary).catch((e) => console.error("[daily-nudge] calendar failed:", e));
   }

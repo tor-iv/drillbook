@@ -1,6 +1,7 @@
 import { db, schema } from "@/db";
 import { athleteProfile, coachConfigured, coachModel, coachSay, WEEKLY_COACH_SYSTEM } from "@/lib/coach";
 import { sendCoachEmail } from "@/lib/email";
+import { sendOwnerTelegram } from "@/lib/telegram";
 import { localDate } from "@/lib/dates";
 import { getRangeBalances, goalWeightLb } from "@/lib/energy";
 import { getWeekStatus } from "@/lib/status";
@@ -37,6 +38,7 @@ export async function runWeeklyCoach(force = false): Promise<string> {
   await sendCoachEmail(`Drillbook: your week + next week's plan`, content).catch((e) =>
     console.error("[weekly-coach] email failed:", e),
   );
+  await sendOwnerTelegram(content).catch((e) => console.error("[weekly-coach] telegram failed:", e));
 
   markRan("weekly-coach", today);
   return content;
