@@ -7,9 +7,9 @@ const staatliches = Staatliches({ weight: "400", subsets: ["latin"], variable: "
 const marker = Permanent_Marker({ weight: "400", subsets: ["latin"], variable: "--font-marker" });
 
 export const metadata: Metadata = {
-  title: "Coach Gus",
-  description: "Old-school coaching. Daily drills, logged.",
-  appleWebApp: { capable: true, statusBarStyle: "default", title: "Coach Gus" },
+  title: "Tally",
+  description: "Count what counts. Daily drills, logged.",
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "Tally" },
   icons: { apple: "/icons/apple-touch-icon.png" },
 };
 

@@ -36,7 +36,7 @@ export default function Dashboard() {
   return (
     <main>
       <header className="mb-6">
-        <h1 className="font-display text-5xl leading-none">Coach Gus</h1>
+        <h1 className="font-display text-5xl leading-none">Tally</h1>
         <p className="mt-1 text-sm text-pencil">
           {dateLabel} — {openCount === 0 ? "all drills closed" : `${openCount} drill${openCount > 1 ? "s" : ""} open`}
         </p>

@@ -170,7 +170,7 @@ export async function POST(req: NextRequest) {
       // Claim flow: first chat to present the PIN becomes the owner.
       if (msg.text && pinMatches(msg.text.trim())) {
         setOwnerChatId(chatId);
-        await sendTelegram(chatId, "About time, kid. This is Coach Gus — log your meals, workouts, and reps right here, or just tell me what's going on.");
+        await sendTelegram(chatId, "About time, kid. Tally's open — log your meals, workouts, and reps right here, or just tell me what's going on.");
       } else {
         await sendTelegram(chatId, "Send the PIN to claim this bot.");
       }

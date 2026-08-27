@@ -1,6 +1,6 @@
 // Public page (excluded from the PIN wall) — companion to /privacy for A2P
 // campaign vetting.
-export const metadata = { title: "Terms of Service — Drillbook" };
+export const metadata = { title: "Terms of Service — Tally" };
 
 export default function TermsPage() {
   return (
@@ -10,14 +10,14 @@ export default function TermsPage() {
 
       <div className="marker-box mt-4 flex flex-col gap-3 p-4 text-sm leading-relaxed">
         <p>
-          Drillbook is a private, single-user personal fitness tracking application. Access is restricted to the
+          Tally (drillbook.tors-bored.com) is a private, single-user personal fitness tracking application. Access is restricted to the
           account owner. The service is provided as-is, without warranty; fitness and nutrition figures are estimates,
           not medical advice.
         </p>
 
         <h2 className="font-display text-2xl">SMS Terms</h2>
         <p>
-          By enabling SMS reminders (Coach Gus Reminders), the account owner consents to receive up to 3 recurring
+          By enabling SMS reminders (Tally Reminders), the account owner consents to receive up to 3 recurring
           automated fitness reminder text messages per day at the mobile number he provides. Consent is not a condition
           of any purchase; nothing is sold through this service. Message and data rates may apply. Message frequency
           may vary. Reply <strong>STOP</strong> to cancel at any time, <strong>HELP</strong> for help. Carriers are not

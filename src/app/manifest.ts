@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Coach Gus",
-    short_name: "Coach Gus",
-    description: "Old-school coaching. Daily drills, logged.",
+    name: "Tally",
+    short_name: "Tally",
+    description: "Count what counts. Daily drills, logged.",
     start_url: "/",
     display: "standalone",
     background_color: "#f7f4ec",

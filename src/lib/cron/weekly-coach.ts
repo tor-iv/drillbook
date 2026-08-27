@@ -35,7 +35,7 @@ export async function runWeeklyCoach(force = false): Promise<string> {
 
   db.insert(schema.aiNudges).values({ date: today, kind: "weekly", content, model }).run();
 
-  await sendCoachEmail(`Coach Gus: your week + next week's plan`, content).catch((e) =>
+  await sendCoachEmail(`Tally: your week + next week's plan`, content).catch((e) =>
     console.error("[weekly-coach] email failed:", e),
   );
   await sendOwnerTelegram(content).catch((e) => console.error("[weekly-coach] telegram failed:", e));

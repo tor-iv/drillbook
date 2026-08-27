@@ -1,6 +1,6 @@
 // Public page (excluded from the PIN wall) — required for A2P 10DLC campaign
 // vetting, which verifies the SMS privacy language below.
-export const metadata = { title: "Privacy Policy — Drillbook" };
+export const metadata = { title: "Privacy Policy — Tally" };
 
 export default function PrivacyPage() {
   return (
@@ -10,7 +10,7 @@ export default function PrivacyPage() {
 
       <div className="marker-box mt-4 flex flex-col gap-3 p-4 text-sm leading-relaxed">
         <p>
-          Drillbook is a single-user personal fitness tracker operated by its sole user and owner. The only data it
+          Tally (drillbook.tors-bored.com) is a single-user personal fitness tracker operated by its sole user and owner. The only data it
           stores — workout logs, food logs, body weight, and progress photos — is entered by the account owner about
           himself and stored on a server he controls. There are no other users, no advertising, no analytics trackers,
           and no sale of data.
@@ -18,7 +18,7 @@ export default function PrivacyPage() {
 
         <h2 className="font-display text-2xl">SMS / Text Messaging Program</h2>
         <p>
-          Coach Gus Reminders sends daily fitness reminder text messages. The sole recipient is the account owner, who
+          Tally Reminders sends daily fitness reminder text messages. The sole recipient is the account owner, who
           opts in by enabling SMS reminders in his own account configuration. Message frequency: up to 3 messages per
           day. Message and data rates may apply. Reply <strong>STOP</strong> to unsubscribe at any time, or{" "}
           <strong>HELP</strong> for help. Carriers are not liable for delayed or undelivered messages.

@@ -52,12 +52,12 @@ export async function runDailyNudge(force = false, slot: NudgeSlot = "evening"):
   // deliveries — one failing must not block the others or the run marker.
   const subject =
     slot === "morning"
-      ? `Coach Gus: today's plan`
+      ? `Tally: today's plan`
       : slot === "midday"
-        ? `Coach Gus: midday check`
+        ? `Tally: midday check`
         : status.behind
-          ? `Coach Gus: you're behind today`
-          : `Coach Gus: goals hit`;
+          ? `Tally: you're behind today`
+          : `Tally: goals hit`;
   await sendCoachEmail(subject, content).catch((e) => console.error("[daily-nudge] email failed:", e));
   await sendNudgeSms(content).catch((e) => console.error("[daily-nudge] sms failed:", e));
   await sendOwnerTelegram(content).catch((e) => console.error("[daily-nudge] telegram failed:", e));
