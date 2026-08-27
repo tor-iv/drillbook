@@ -85,7 +85,8 @@ export async function POST(req: NextRequest) {
     .returning()
     .get();
 
-  return NextResponse.json({ ok: true, meal: row });
+  // confidence is advisory UI feedback for this one response, not stored.
+  return NextResponse.json({ ok: true, meal: row, confidence: estimate.confidence });
 }
 
 export async function DELETE(req: NextRequest) {

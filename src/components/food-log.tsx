@@ -9,6 +9,7 @@ export function FoodLog({ initialMeals }: { initialMeals: Meal[] }) {
   const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [hint, setHint] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const totalCal = Math.round(meals.reduce((s, m) => s + m.calories, 0));
@@ -19,6 +20,7 @@ export function FoodLog({ initialMeals }: { initialMeals: Meal[] }) {
     if (!photo && !description.trim()) return;
     setBusy(true);
     setError("");
+    setHint("");
     const form = new FormData();
     if (photo) form.set("photo", photo);
     if (description.trim()) form.set("description", description.trim());
@@ -29,9 +31,12 @@ export function FoodLog({ initialMeals }: { initialMeals: Meal[] }) {
       setError(body?.error ?? "Couldn't log that — try again");
       return;
     }
-    const { meal } = await res.json();
+    const { meal, confidence } = await res.json();
     setMeals((m) => [meal, ...m]);
     setDescription("");
+    if (confidence === "low") {
+      setHint(`Rough guess on "${meal.name}" — a few words (size, sauces, sides) tightens it.`);
+    }
   }
 
   async function remove(id: number) {
@@ -90,6 +95,7 @@ export function FoodLog({ initialMeals }: { initialMeals: Meal[] }) {
           }}
         />
         {error && <p className="mt-2 text-sm text-margin">{error}</p>}
+        {hint && <p className="mt-2 text-sm text-pencil">{hint}</p>}
       </div>
 
       {meals.length === 0 ? (

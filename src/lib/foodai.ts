@@ -22,12 +22,13 @@ export function foodAiConfigured(): boolean {
   return !!key && key.trim() !== "" && !key.includes("placeholder");
 }
 
-const SYSTEM = `You estimate nutrition for one meal from a photo and/or short description. Reply with ONLY a JSON object, no prose, no code fences: {"name": "<3-6 word meal name>", "calories": <number, total kcal>, "protein": <number, grams>}. Give your single best point estimate for a typical serving of what you see or read — never a range, never a refusal. If genuinely ambiguous, estimate the middle of the plausible range.`;
+const SYSTEM = `You estimate nutrition for one meal from a photo and/or short description. The eater is a very active ~200 lb male athlete — when portion size is ambiguous, assume athlete-sized portions, not small USDA reference servings. Reply with ONLY a JSON object, no prose, no code fences: {"name": "<3-6 word meal name>", "calories": <number, total kcal>, "protein": <number, grams>, "confidence": "high"|"low"}. Give your single best point estimate — never a range, never a refusal; if genuinely ambiguous, estimate the middle of the plausible range. Set confidence to "low" only when hidden factors (unseen oils, unknowable portion depth, mixed dishes, no quantities given) could plausibly swing calories by more than ~35%.`;
 
 const resultSchema = z.object({
   name: z.string().min(1),
   calories: z.number().nonnegative(),
   protein: z.number().nonnegative().nullable().catch(null),
+  confidence: z.enum(["high", "low"]).catch("high"),
 });
 
 export type FoodEstimate = z.infer<typeof resultSchema>;
