@@ -1,5 +1,5 @@
 import { db, schema } from "@/db";
-import { coachSay, DAILY_NUDGE_SYSTEM, llmConfigured, llmModel } from "@/lib/deepseek";
+import { athleteProfile, coachSay, DAILY_NUDGE_SYSTEM, llmConfigured, llmModel } from "@/lib/deepseek";
 import { sendCoachEmail } from "@/lib/email";
 import { localDate } from "@/lib/dates";
 import { googleConnected, upsertDailyEvent } from "@/lib/google";
@@ -15,6 +15,7 @@ export async function runDailyNudge(force = false): Promise<string> {
   let content: string;
   if (llmConfigured()) {
     content = await coachSay(DAILY_NUDGE_SYSTEM, {
+      athlete: athleteProfile(),
       date: today,
       activities: status.activities
         .filter((a) => a.kind === "counter")

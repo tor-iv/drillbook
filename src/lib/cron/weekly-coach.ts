@@ -1,5 +1,5 @@
 import { db, schema } from "@/db";
-import { coachSay, llmConfigured, llmModel, WEEKLY_COACH_SYSTEM } from "@/lib/deepseek";
+import { athleteProfile, coachSay, llmConfigured, llmModel, WEEKLY_COACH_SYSTEM } from "@/lib/deepseek";
 import { sendCoachEmail } from "@/lib/email";
 import { localDate } from "@/lib/dates";
 import { getWeekStatus } from "@/lib/status";
@@ -13,7 +13,7 @@ export async function runWeeklyCoach(force = false): Promise<string> {
 
   let content: string;
   if (llmConfigured()) {
-    content = await coachSay(WEEKLY_COACH_SYSTEM, week);
+    content = await coachSay(WEEKLY_COACH_SYSTEM, { athlete: athleteProfile(), ...week });
   } else {
     const lines = week.totals.map(
       (t) => `${t.label}: ${t.total} ${t.unit}${t.weeklyGoal ? ` / ${t.weeklyGoal}` : ""} (${t.daysMet}/7 days)`,
