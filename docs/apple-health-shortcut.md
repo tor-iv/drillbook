@@ -61,3 +61,21 @@ pnpm import:health -- \
 Add `--dry-run` first to see what it found. The export in iCloud is from May
 2026 — for full history, make a fresh export (Health app → profile photo →
 *Export All Health Data*) whenever; overlapping imports are harmless.
+
+## 3. Voice logging with Siri ("Hey Siri, log a meal")
+
+Create one Shortcut per phrase — each is 3 actions: **Dictate Text** →
+**Get Contents of URL** (POST `https://drillbook.tors-bored.com/api/log`,
+header `Authorization: Bearer <SHORTCUT_API_TOKEN>`, JSON body below with the
+dictated text) → **Speak** the `spoken` field from the response.
+
+| Shortcut name (= Siri phrase) | JSON body |
+|---|---|
+| "Log a meal" | `{"type":"meal","description":<Dictated Text>}` |
+| "Log a workout" | `{"type":"workout","description":<Dictated Text>}` |
+| "Log push-ups" | `{"type":"counter","activityKey":"pushups","delta":<Dictated Text as Number>}` |
+| "Log pull-ups" | `{"type":"counter","activityKey":"pullups","delta":<Dictated Text as Number>}` |
+| "Log my weight" | `{"type":"weight","value":<Dictated Text as Number>}` |
+
+These work from iPhone, Apple Watch ("Hey Siri" on the watch), CarPlay, and
+AirPods. Siri speaks back the running total.
