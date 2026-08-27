@@ -4,6 +4,7 @@ import { localDate } from "@/lib/dates";
 import { getTodayStatus } from "@/lib/status";
 import { CounterCard, MeasureCard } from "@/components/activity-cards";
 import { CoachNote } from "@/components/coach-note";
+import { WorkoutLog } from "@/components/workout-log";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,12 @@ export default function Dashboard() {
     .where(and(eq(schema.aiNudges.date, today), eq(schema.aiNudges.kind, "daily")))
     .orderBy(desc(schema.aiNudges.id))
     .get();
+  const todayWorkouts = db
+    .select()
+    .from(schema.workouts)
+    .where(eq(schema.workouts.date, today))
+    .orderBy(desc(schema.workouts.id))
+    .all();
 
   const dateLabel = new Date(`${today}T12:00:00`).toLocaleDateString("en-US", {
     weekday: "long",
@@ -50,6 +57,17 @@ export default function Dashboard() {
             <MeasureCard key={a.key} activity={a} />
           ),
         )}
+        <WorkoutLog
+          initialWorkouts={todayWorkouts.map((w) => ({
+            id: w.id,
+            type: w.type,
+            durationMin: w.durationMin,
+            distanceMi: w.distanceMi,
+            calories: w.calories,
+            source: w.source,
+            rawJson: w.rawJson,
+          }))}
+        />
       </div>
     </main>
   );
