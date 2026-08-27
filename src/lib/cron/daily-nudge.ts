@@ -3,6 +3,7 @@ import { athleteProfile, coachConfigured, coachModel, coachSay, DAILY_NUDGE_SYST
 import { sendCoachEmail } from "@/lib/email";
 import { localDate } from "@/lib/dates";
 import { googleConnected, upsertDailyEvent } from "@/lib/google";
+import { getDayEnergy } from "@/lib/energy";
 import { getTodayStatus } from "@/lib/status";
 import { alreadyRanToday, markRan } from "./guard";
 
@@ -11,6 +12,7 @@ export async function runDailyNudge(force = false): Promise<string> {
   if (!force && alreadyRanToday("daily-nudge", today)) return "already ran today";
 
   const status = getTodayStatus(today);
+  const energy = getDayEnergy(today);
 
   // The nudge must go out even when the LLM is down or unconfigured —
   // fall back to a template rather than losing the day's email.
@@ -27,8 +29,12 @@ export async function runDailyNudge(force = false): Promise<string> {
         activities: status.activities
           .filter((a) => a.kind === "counter")
           .map((a) => ({ label: a.label, done: a.done ?? 0, goal: a.goal, unit: a.unit, streak: a.streak })),
-        bodyWeightLb: status.activities.find((a) => a.key === "bodyweight")?.done ?? undefined,
-        caloriesEatenToday: status.calories ?? undefined,
+        bodyWeightLb: energy.weightLb ?? undefined,
+        goalWeightLb: energy.goalWeightLb,
+        caloriesEatenToday: energy.eaten ?? undefined,
+        estCaloriesBurnedToday: energy.burned ?? undefined,
+        energyBalance: energy.balance ?? undefined,
+        dailyDeficitTarget: energy.deficitTarget,
       });
       model = coachModel();
     } catch (e) {

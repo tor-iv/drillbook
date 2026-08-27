@@ -41,10 +41,12 @@ export function DayChart({
   const innerH = H - PAD.top - PAD.bottom;
   // Counters: zero-baseline bars, rounded-up max. Measures: tight domain
   // around the data — a 177–181lb series must not flatline on a 0–200 axis.
-  const lo = kind === "measure" ? Math.floor(Math.min(...values) - 1) : 0;
+  // Measures keep a tight domain but stretch to include the goal (e.g. the
+  // 190 lb line) so progress toward it stays visible.
+  const lo = kind === "measure" ? Math.floor(Math.min(...values, goal ?? Infinity) - 1) : 0;
   const hi =
     kind === "measure"
-      ? Math.ceil(Math.max(...values) + 1)
+      ? Math.ceil(Math.max(...values, goal ?? -Infinity) + 1)
       : niceMax(Math.max(Math.max(...values), goal ?? 0, lo + 1));
   const y = (v: number) => PAD.top + innerH - ((v - lo) / (hi - lo)) * innerH;
   const x = (i: number) => PAD.left + (i + 0.5) * (innerW / points.length);
@@ -117,7 +119,7 @@ export function DayChart({
         )}
 
         {/* goal reference line, labeled at its own end */}
-        {goal != null && kind === "counter" && (
+        {goal != null && (
           <>
             <line
               x1={PAD.left}

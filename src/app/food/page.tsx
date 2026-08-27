@@ -1,6 +1,7 @@
 import { desc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { localDate } from "@/lib/dates";
+import { getDayEnergy } from "@/lib/energy";
 import { FoodLog } from "@/components/food-log";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +29,8 @@ export default function FoodPage() {
           protein: m.protein,
           method: m.method,
         }))}
+        burned={getDayEnergy(today).burned}
+        deficitTarget={getDayEnergy(today).deficitTarget}
       />
     </main>
   );

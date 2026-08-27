@@ -80,7 +80,7 @@ export function CounterCard({ activity }: { activity: ActivityStatus }) {
   );
 }
 
-export function MeasureCard({ activity }: { activity: ActivityStatus }) {
+export function MeasureCard({ activity, goalNote }: { activity: ActivityStatus; goalNote?: string }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [draft, setDraft] = useState(activity.done != null ? String(activity.done) : "");
@@ -103,7 +103,7 @@ export function MeasureCard({ activity }: { activity: ActivityStatus }) {
     <section className="marker-box p-4">
       <div className="flex items-baseline justify-between">
         <h2 className="font-display text-2xl leading-none">{activity.label}</h2>
-        <Tally count={activity.streak} />
+        {goalNote ? <span className="font-marker text-sm text-margin">{goalNote}</span> : <Tally count={activity.streak} />}
       </div>
       <div className="mt-2 flex items-end gap-3">
         <input

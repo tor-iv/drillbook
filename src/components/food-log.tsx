@@ -4,7 +4,15 @@ import { useRef, useState } from "react";
 
 type Meal = { id: number; name: string; calories: number; protein: number | null; method: string };
 
-export function FoodLog({ initialMeals }: { initialMeals: Meal[] }) {
+export function FoodLog({
+  initialMeals,
+  burned,
+  deficitTarget,
+}: {
+  initialMeals: Meal[];
+  burned: number | null;
+  deficitTarget: number;
+}) {
   const [meals, setMeals] = useState(initialMeals);
   const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);
@@ -50,10 +58,22 @@ export function FoodLog({ initialMeals }: { initialMeals: Meal[] }) {
         <div className="flex items-baseline justify-between">
           <p className="font-display text-5xl leading-none tabular-nums">
             {totalCal}
-            <span className="text-xl text-pencil"> cal today</span>
+            <span className="text-xl text-pencil"> in</span>
+            {burned != null && <span className="text-xl text-pencil"> · ~{burned} out</span>}
           </p>
           <p className="text-sm text-pencil">{totalProtein}g protein</p>
         </div>
+        {burned != null && meals.length > 0 && (
+          <p className="mt-1 text-sm text-pencil">
+            {totalCal - burned <= -deficitTarget ? (
+              <span className="highlighted text-ink">on pace — {burned - totalCal} cal deficit (target {deficitTarget})</span>
+            ) : totalCal - burned < 0 ? (
+              `${burned - totalCal} cal deficit so far (target ${deficitTarget})`
+            ) : (
+              `${totalCal - burned} cal over burn so far`
+            )}
+          </p>
+        )}
       </section>
 
       <div className="marker-box mb-4 p-4">

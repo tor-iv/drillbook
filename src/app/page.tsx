@@ -5,6 +5,7 @@ import { getTodayStatus } from "@/lib/status";
 import { CounterCard, MeasureCard } from "@/components/activity-cards";
 import { CoachNote } from "@/components/coach-note";
 import { WorkoutLog } from "@/components/workout-log";
+import { getDayEnergy } from "@/lib/energy";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,7 @@ export default function Dashboard() {
     .orderBy(desc(schema.workouts.id))
     .all();
 
+  const energy = getDayEnergy(today);
   const dateLabel = new Date(`${today}T12:00:00`).toLocaleDateString("en-US", {
     weekday: "long",
     month: "short",
@@ -45,7 +47,11 @@ export default function Dashboard() {
       {status.calories != null && (
         <a href="/food" className="marker-box mb-5 flex items-baseline justify-between p-3">
           <span className="font-display text-lg leading-none">Food</span>
-          <span className="text-sm text-pencil">{status.calories} cal today →</span>
+          <span className="text-sm text-pencil">
+            {energy.burned != null
+              ? `${status.calories} in · ~${energy.burned} out →`
+              : `${status.calories} cal today →`}
+          </span>
         </a>
       )}
 
@@ -54,7 +60,15 @@ export default function Dashboard() {
           a.kind === "counter" ? (
             <CounterCard key={a.key} activity={a} />
           ) : (
-            <MeasureCard key={a.key} activity={a} />
+            <MeasureCard
+              key={a.key}
+              activity={a}
+              goalNote={
+                a.key === "bodyweight" && energy.weightLb != null
+                  ? `${Math.max(0, Math.round((energy.weightLb - energy.goalWeightLb) * 10) / 10)} lb to ${energy.goalWeightLb}`
+                  : undefined
+              }
+            />
           ),
         )}
         <WorkoutLog

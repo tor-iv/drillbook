@@ -4,6 +4,7 @@ import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { dateRange, localDate } from "@/lib/dates";
 import { DayChart, type DayPoint } from "@/components/day-chart";
+import { goalWeightLb } from "@/lib/energy";
 
 const LOG_DAYS = 14;
 
@@ -83,7 +84,12 @@ export default async function TrendsPage({
           return (
             <section key={a.key} className="marker-box p-4">
               <h2 className="font-display mb-1 text-2xl leading-none">{a.label}</h2>
-              <DayChart points={points} goal={a.dailyTarget} unit={a.unit} kind={a.kind} />
+              <DayChart
+                points={points}
+                goal={a.key === "bodyweight" ? goalWeightLb() : a.dailyTarget}
+                unit={a.unit}
+                kind={a.kind}
+              />
               <details className="mt-2">
                 <summary className="cursor-pointer text-xs text-pencil">as a table</summary>
                 <table className="mt-1 w-full text-sm">
