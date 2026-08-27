@@ -1,6 +1,6 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
-import { claudeClient, claudeConfigured } from "./claude";
+import { askClaudeJson, claudeConfigured } from "./claude";
 
 // Food estimation needs vision — Claude Haiku 4.5 is the cheapest
 // vision-capable Claude (~$0.003/meal photo). Model overridable via FOOD_MODEL.
@@ -46,22 +46,5 @@ export async function estimateMeal(input: {
     text: input.description?.trim() ? `Meal: ${input.description.trim()}` : "Estimate this meal.",
   });
 
-  // Sonnet 5+ thinks adaptively by default — the budget must cover thinking
-  // plus the answer, and low effort keeps a simple estimate cheap. Haiku 4.5
-  // rejects the effort param, so only send it to models that support it.
-  const model = foodModel();
-  const response = await claudeClient().messages.create({
-    model,
-    max_tokens: 1500,
-    ...(model.includes("haiku") ? {} : { output_config: { effort: "low" as const } }),
-    system: SYSTEM,
-    messages: [{ role: "user", content }],
-  });
-
-  if (response.stop_reason === "refusal") throw new Error("model declined the request");
-  const text = response.content.find((b) => b.type === "text")?.text ?? "";
-  // Tolerate stray prose/fences around the JSON object.
-  const match = text.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error(`no JSON in response: ${text.slice(0, 120)}`);
-  return resultSchema.parse(JSON.parse(match[0]));
+  return resultSchema.parse(await askClaudeJson({ model: foodModel(), system: SYSTEM, content }));
 }

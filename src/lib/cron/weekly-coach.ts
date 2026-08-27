@@ -11,21 +11,26 @@ export async function runWeeklyCoach(force = false): Promise<string> {
 
   const week = getWeekStatus(today);
 
-  let content: string;
+  // Same resilience contract as the daily nudge: template beats silence.
+  const lines = week.totals.map(
+    (t) => `${t.label}: ${t.total} ${t.unit}${t.weeklyGoal ? ` / ${t.weeklyGoal}` : ""} (${t.daysMet}/7 days)`,
+  );
+  let content = `Week ${week.from} → ${week.to}\n${lines.join("\n")}`;
+  let model = "template";
   if (coachConfigured()) {
-    content = await coachSay(WEEKLY_COACH_SYSTEM, { athlete: athleteProfile(), ...week });
-  } else {
-    const lines = week.totals.map(
-      (t) => `${t.label}: ${t.total} ${t.unit}${t.weeklyGoal ? ` / ${t.weeklyGoal}` : ""} (${t.daysMet}/7 days)`,
-    );
-    content = `Week ${week.from} → ${week.to}\n${lines.join("\n")}`;
+    try {
+      content = await coachSay(WEEKLY_COACH_SYSTEM, { athlete: athleteProfile(), ...week });
+      model = coachModel();
+    } catch (e) {
+      console.error("[weekly-coach] LLM failed, using template:", e);
+    }
   }
 
-  db.insert(schema.aiNudges)
-    .values({ date: today, kind: "weekly", content, model: coachConfigured() ? coachModel() : "template" })
-    .run();
+  db.insert(schema.aiNudges).values({ date: today, kind: "weekly", content, model }).run();
 
-  await sendCoachEmail(`Drillbook: your week + next week's plan`, content);
+  await sendCoachEmail(`Drillbook: your week + next week's plan`, content).catch((e) =>
+    console.error("[weekly-coach] email failed:", e),
+  );
 
   markRan("weekly-coach", today);
   return content;

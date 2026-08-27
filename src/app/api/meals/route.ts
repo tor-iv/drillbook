@@ -51,15 +51,11 @@ export async function POST(req: NextRequest) {
 
   let imageBase64: string | undefined;
   let imageMediaType: string | undefined;
-  let photoPath: string | null = null;
+  let photoBuf: Buffer | undefined;
   if (hasPhoto) {
-    const buf = Buffer.from(await photo.arrayBuffer());
-    imageBase64 = buf.toString("base64");
+    photoBuf = Buffer.from(await photo.arrayBuffer());
+    imageBase64 = photoBuf.toString("base64");
     imageMediaType = photo.type;
-    const ext = photo.type === "image/png" ? "png" : photo.type === "image/webp" ? "webp" : "jpg";
-    photoPath = `meals/${date}-${nanoid(8)}.${ext}`;
-    mkdirSync(join(UPLOAD_DIR, "meals"), { recursive: true });
-    await writeFile(join(UPLOAD_DIR, photoPath), buf);
   }
 
   let estimate;
@@ -68,6 +64,15 @@ export async function POST(req: NextRequest) {
   } catch (e) {
     console.error("[meals] estimate failed:", e);
     return NextResponse.json({ error: "couldn't estimate that — try adding a short description" }, { status: 502 });
+  }
+
+  // Persist the photo only after a successful estimate — no orphan files.
+  let photoPath: string | null = null;
+  if (hasPhoto && photoBuf) {
+    const ext = photo.type === "image/png" ? "png" : photo.type === "image/webp" ? "webp" : "jpg";
+    photoPath = `meals/${date}-${nanoid(8)}.${ext}`;
+    mkdirSync(join(UPLOAD_DIR, "meals"), { recursive: true });
+    await writeFile(join(UPLOAD_DIR, photoPath), photoBuf);
   }
 
   const row = db

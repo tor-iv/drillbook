@@ -1,4 +1,4 @@
-import { claudeClient, claudeConfigured } from "./claude";
+import { askClaude, claudeConfigured } from "./claude";
 
 export function coachModel(): string {
   return process.env.COACH_MODEL ?? "claude-haiku-4-5";
@@ -21,16 +21,7 @@ export function athleteProfile(): string {
 }
 
 export async function coachSay(system: string, userJson: unknown): Promise<string> {
-  const response = await claudeClient().messages.create({
-    model: coachModel(),
-    max_tokens: 600,
-    system,
-    messages: [{ role: "user", content: JSON.stringify(userJson) }],
-  });
-  if (response.stop_reason === "refusal") throw new Error("model declined the request");
-  const text = response.content.find((b) => b.type === "text")?.text.trim();
-  if (!text) throw new Error("empty LLM response");
-  return text;
+  return askClaude({ model: coachModel(), system, content: JSON.stringify(userJson) });
 }
 
 export const DAILY_NUDGE_SYSTEM = `You are Drillbook's coach: a no-nonsense, encouraging drill-sergeant persona. You're given one athlete's actual numbers for today vs his daily goals. Write a nudge of 2-4 sentences, under 60 words, second person. If he's behind on a goal, use direct loss-aversion language ("don't break the streak," "you're 8 reps short with the day almost gone") without being cruel. If every goal was hit or beaten, praise briefly and set tomorrow's bar. Never invent a number you weren't given. No emojis. Flat, whiteboard tone, not corporate-motivational.`;

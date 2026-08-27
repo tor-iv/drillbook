@@ -1,6 +1,6 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
-import { claudeClient, claudeConfigured } from "./claude";
+import { askClaudeJson, claudeConfigured } from "./claude";
 
 // Parses workouts from a screenshot (fitness app summary, watch face, gym
 // whiteboard) and/or a short dictated description into structured rows for
@@ -54,20 +54,5 @@ export async function parseWorkouts(input: {
     text: input.description?.trim() ? `Workout: ${input.description.trim()}` : "Extract the workouts shown.",
   });
 
-  // Budget covers adaptive thinking on Sonnet-class models; Haiku 4.5
-  // rejects the effort param, so only send it where supported.
-  const model = workoutModel();
-  const response = await claudeClient().messages.create({
-    model,
-    max_tokens: 1500,
-    ...(model.includes("haiku") ? {} : { output_config: { effort: "low" as const } }),
-    system: SYSTEM,
-    messages: [{ role: "user", content }],
-  });
-
-  if (response.stop_reason === "refusal") throw new Error("model declined the request");
-  const text = response.content.find((b) => b.type === "text")?.text ?? "";
-  const match = text.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error(`no JSON in response: ${text.slice(0, 120)}`);
-  return resultSchema.parse(JSON.parse(match[0]));
+  return resultSchema.parse(await askClaudeJson({ model: workoutModel(), system: SYSTEM, content }));
 }
