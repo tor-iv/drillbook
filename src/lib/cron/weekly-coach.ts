@@ -1,5 +1,5 @@
 import { db, schema } from "@/db";
-import { athleteProfile, coachSay, llmConfigured, llmModel, WEEKLY_COACH_SYSTEM } from "@/lib/deepseek";
+import { athleteProfile, coachConfigured, coachModel, coachSay, WEEKLY_COACH_SYSTEM } from "@/lib/coach";
 import { sendCoachEmail } from "@/lib/email";
 import { localDate } from "@/lib/dates";
 import { getWeekStatus } from "@/lib/status";
@@ -12,7 +12,7 @@ export async function runWeeklyCoach(force = false): Promise<string> {
   const week = getWeekStatus(today);
 
   let content: string;
-  if (llmConfigured()) {
+  if (coachConfigured()) {
     content = await coachSay(WEEKLY_COACH_SYSTEM, { athlete: athleteProfile(), ...week });
   } else {
     const lines = week.totals.map(
@@ -22,7 +22,7 @@ export async function runWeeklyCoach(force = false): Promise<string> {
   }
 
   db.insert(schema.aiNudges)
-    .values({ date: today, kind: "weekly", content, model: llmConfigured() ? llmModel() : "template" })
+    .values({ date: today, kind: "weekly", content, model: coachConfigured() ? coachModel() : "template" })
     .run();
 
   await sendCoachEmail(`Drillbook: your week + next week's plan`, content);

@@ -65,7 +65,6 @@ CRON_TIMEZONE=America/New_York
 RESEND_API_KEY=<reuse foefinder's Resend key>
 RESEND_FROM_EMAIL=Drillbook <nudge@foefinder.me>
 NUDGE_EMAIL_TO=vcox484@gmail.com
-DEEPSEEK_API_KEY=<reuse clay-oracle's DeepSeek key>
 ANTHROPIC_API_KEY=<console.anthropic.com key — food photo calorie estimates>
 FOOD_MODEL=claude-haiku-4-5
 GOOGLE_CLIENT_ID=      # after docs/google-setup.md

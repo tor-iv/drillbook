@@ -7,7 +7,7 @@ you're behind. Lives at [drillbook.tors-bored.com](https://drillbook.tors-bored.
 - **Today** — tap-to-log counters, streak tally marks, tonight's coach nudge
 - **Trends** — per-activity daily charts vs goal, 7/30/90 day
 - **Photos** — private progress pics, tap two to compare
-- **Coach** — DeepSeek-written weekly training plan (run/swim/climb/lift), Sundays 6pm
+- **Coach** — AI-written weekly training plan (run/swim/climb/lift), Sundays 6pm
 - **Nudges** — 8pm email (Resend) + iOS Shortcut notification when behind
 - **Sync** — nightly Apple Health Shortcut push + one-time history import
 - **Calendar** — daily summary event written to Google Calendar
@@ -15,8 +15,8 @@ you're behind. Lives at [drillbook.tors-bored.com](https://drillbook.tors-bored.
 ## Stack
 
 Next.js 16 (App Router) · SQLite (better-sqlite3 + Drizzle) · node-cron
-in-process scheduler · DeepSeek via the OpenAI SDK · Resend · hand-rolled
-Google OAuth. One Docker container on the fieldhouse box; DB + photos on one
+in-process scheduler · Claude Haiku (coach text + food vision, one key) ·
+Resend · hand-rolled Google OAuth. One Docker container on the fieldhouse box; DB + photos on one
 volume.
 
 ## Dev

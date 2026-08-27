@@ -1,5 +1,5 @@
 import { db, schema } from "@/db";
-import { athleteProfile, coachSay, DAILY_NUDGE_SYSTEM, llmConfigured, llmModel } from "@/lib/deepseek";
+import { athleteProfile, coachConfigured, coachModel, coachSay, DAILY_NUDGE_SYSTEM } from "@/lib/coach";
 import { sendCoachEmail } from "@/lib/email";
 import { localDate } from "@/lib/dates";
 import { googleConnected, upsertDailyEvent } from "@/lib/google";
@@ -13,7 +13,7 @@ export async function runDailyNudge(force = false): Promise<string> {
   const status = getTodayStatus(today);
 
   let content: string;
-  if (llmConfigured()) {
+  if (coachConfigured()) {
     content = await coachSay(DAILY_NUDGE_SYSTEM, {
       athlete: athleteProfile(),
       date: today,
@@ -31,7 +31,7 @@ export async function runDailyNudge(force = false): Promise<string> {
   }
 
   db.insert(schema.aiNudges)
-    .values({ date: today, kind: "daily", content, model: llmConfigured() ? llmModel() : "template" })
+    .values({ date: today, kind: "daily", content, model: coachConfigured() ? coachModel() : "template" })
     .run();
 
   const subject = status.behind ? `Drillbook: you're behind today` : `Drillbook: goals hit`;

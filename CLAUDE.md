@@ -32,9 +32,11 @@ pnpm import:health -- --zip <export.zip> --url <base> --token <token>
   `SHORTCUT_API_TOKEN` bearer auth.
 - **Photos are private**: stored under `UPLOAD_DIR`, served only through the
   cookie-checked `/api/photos/[id]/file` route. Never put them in `public/`.
-- **DeepSeek** via `openai` SDK with `baseURL: https://api.deepseek.com`
-  (`src/lib/deepseek.ts`). Every integration (LLM, Resend, Google) has a
-  `*Configured()` guard and a working fallback — keep it that way.
+- **All AI through one Anthropic key** (`src/lib/claude.ts`): coach text in
+  `src/lib/coach.ts`, food vision in `src/lib/foodai.ts`, both default to
+  claude-haiku-4-5 (COACH_MODEL / FOOD_MODEL envs). Every integration
+  (LLM, Resend, Google) has a `*Configured()` guard and a working fallback —
+  keep it that way.
 - **Docker footgun**: the runner stage COPYs better-sqlite3 out of
   `.pnpm/better-sqlite3@*` with a wildcard — don't pin the version there.
 
