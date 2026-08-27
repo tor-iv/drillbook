@@ -34,11 +34,16 @@ cd /opt && git clone git@github.com:tor-iv/drillbook.git
       context: ../drillbook
       target: builder
     profiles: ["tools"]
+    # Same uid as the runner so migrate never leaves root-owned files on the
+    # shared volume (SQLITE_READONLY_DIRECTORY otherwise); corepack needs a
+    # writable HOME when non-root.
+    user: "1001:1001"
     command: ["pnpm", "run", "db:migrate"]
     volumes:
       - drillbookdata:/app/data
     environment:
       DB_PATH: /app/data/drillbook.db
+      HOME: /tmp
 ```
 
 and under `volumes:`:
