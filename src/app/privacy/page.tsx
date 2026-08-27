@@ -18,8 +18,8 @@ export default function PrivacyPage() {
 
         <h2 className="font-display text-2xl">SMS / Text Messaging Program</h2>
         <p>
-          Drillbook Reminders sends daily fitness reminder text messages. The sole recipient is the account owner, who
-          opts in by enabling SMS reminders in his own account configuration. Message frequency: up to 2 messages per
+          Coach Gus Reminders sends daily fitness reminder text messages. The sole recipient is the account owner, who
+          opts in by enabling SMS reminders in his own account configuration. Message frequency: up to 3 messages per
           day. Message and data rates may apply. Reply <strong>STOP</strong> to unsubscribe at any time, or{" "}
           <strong>HELP</strong> for help. Carriers are not liable for delayed or undelivered messages.
         </p>

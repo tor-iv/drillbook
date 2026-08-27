@@ -31,7 +31,7 @@ export function SmsOptIn({ phone, initialOptedIn }: { phone: string; initialOpte
           className="mt-0.5 h-5 w-5 accent-[#16130d]"
         />
         <span>
-          I agree to receive up to 2 automated fitness reminder text messages per day from Drillbook at{" "}
+          I agree to receive up to 3 automated fitness reminder text messages per day from Coach Gus at{" "}
           <strong>{phone}</strong>. Message and data rates may apply. Message frequency may vary. Reply{" "}
           <strong>STOP</strong> to opt out at any time, <strong>HELP</strong> for help. See the{" "}
           <a href="/privacy" className="underline">

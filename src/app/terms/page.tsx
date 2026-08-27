@@ -17,7 +17,7 @@ export default function TermsPage() {
 
         <h2 className="font-display text-2xl">SMS Terms</h2>
         <p>
-          By enabling SMS reminders (Drillbook Reminders), the account owner consents to receive up to 2 recurring
+          By enabling SMS reminders (Coach Gus Reminders), the account owner consents to receive up to 3 recurring
           automated fitness reminder text messages per day at the mobile number he provides. Consent is not a condition
           of any purchase; nothing is sold through this service. Message and data rates may apply. Message frequency
           may vary. Reply <strong>STOP</strong> to cancel at any time, <strong>HELP</strong> for help. Carriers are not

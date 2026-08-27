@@ -30,8 +30,8 @@ export default function LoginPage() {
 
   return (
     <main className="flex min-h-[70dvh] flex-col justify-center">
-      <h1 className="font-display text-6xl leading-none">Drillbook</h1>
-      <p className="font-marker mt-2 text-pencil">Sign the sheet.</p>
+      <h1 className="font-display text-6xl leading-none">Coach Gus</h1>
+      <p className="font-marker mt-2 text-pencil">Sign the sheet, kid.</p>
 
       <form onSubmit={submit} className="mt-8 flex flex-col gap-4">
         <input

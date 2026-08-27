@@ -1,5 +1,6 @@
 import { db, schema } from "@/db";
-import { athleteProfile, coachConfigured, coachModel, coachSay, DAILY_NUDGE_SYSTEM } from "@/lib/coach";
+import { athleteProfile, coachConfigured, coachModel, coachSay, dailyNudgeSystem, type NudgeSlot } from "@/lib/coach";
+import { addDays } from "@/lib/dates";
 import { sendCoachEmail } from "@/lib/email";
 import { localDate } from "@/lib/dates";
 import { googleConnected, upsertDailyEvent } from "@/lib/google";
@@ -9,9 +10,9 @@ import { sendOwnerTelegram } from "@/lib/telegram";
 import { getTodayStatus } from "@/lib/status";
 import { alreadyRanToday, markRan } from "./guard";
 
-export async function runDailyNudge(force = false): Promise<string> {
+export async function runDailyNudge(force = false, slot: NudgeSlot = "evening"): Promise<string> {
   const today = localDate();
-  if (!force && alreadyRanToday("daily-nudge", today)) return "already ran today";
+  if (!force && alreadyRanToday(`daily-nudge-${slot}`, today)) return "already ran today";
 
   const status = getTodayStatus(today);
   const energy = getDayEnergy(today);
@@ -25,9 +26,10 @@ export async function runDailyNudge(force = false): Promise<string> {
   let model = "template";
   if (coachConfigured()) {
     try {
-      content = await coachSay(DAILY_NUDGE_SYSTEM, {
+      content = await coachSay(dailyNudgeSystem(slot), {
         athlete: athleteProfile(),
         date: today,
+        yesterdaySummary: slot === "morning" ? getTodayStatus(addDays(today, -1)).summary : undefined,
         activities: status.activities
           .filter((a) => a.kind === "counter")
           .map((a) => ({ label: a.label, done: a.done ?? 0, goal: a.goal, unit: a.unit, streak: a.streak })),
@@ -46,16 +48,24 @@ export async function runDailyNudge(force = false): Promise<string> {
 
   db.insert(schema.aiNudges).values({ date: today, kind: "daily", content, model }).run();
 
-  // Email, SMS, and calendar are independent best-effort deliveries — one
-  // failing must not block the others or the run marker.
-  const subject = status.behind ? `Drillbook: you're behind today` : `Drillbook: goals hit`;
+  // Email, SMS, Telegram, and calendar are independent best-effort
+  // deliveries — one failing must not block the others or the run marker.
+  const subject =
+    slot === "morning"
+      ? `Coach Gus: today's plan`
+      : slot === "midday"
+        ? `Coach Gus: midday check`
+        : status.behind
+          ? `Coach Gus: you're behind today`
+          : `Coach Gus: goals hit`;
   await sendCoachEmail(subject, content).catch((e) => console.error("[daily-nudge] email failed:", e));
   await sendNudgeSms(content).catch((e) => console.error("[daily-nudge] sms failed:", e));
   await sendOwnerTelegram(content).catch((e) => console.error("[daily-nudge] telegram failed:", e));
-  if (googleConnected()) {
+  // Calendar event only once, at end of day when the summary is complete.
+  if (slot === "evening" && googleConnected()) {
     await upsertDailyEvent(today, status.summary).catch((e) => console.error("[daily-nudge] calendar failed:", e));
   }
 
-  markRan("daily-nudge", today);
+  markRan(`daily-nudge-${slot}`, today);
   return content;
 }

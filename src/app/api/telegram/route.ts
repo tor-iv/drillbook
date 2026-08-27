@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db, schema } from "@/db";
 import { askClaudeJson } from "@/lib/claude";
-import { athleteProfile, coachModel } from "@/lib/coach";
+import { athleteProfile, COACH_PERSONA, coachModel } from "@/lib/coach";
 import { localDate } from "@/lib/dates";
 import { getDayEnergy } from "@/lib/energy";
 import { estimateMeal, foodModel } from "@/lib/foodai";
@@ -16,7 +16,7 @@ import { parseWorkouts, workoutModel } from "@/lib/workoutai";
 // Telegram echoes back on every webhook call; scoped to the single claimed
 // owner chat.
 
-const ROUTER_SYSTEM = `You are Drillbook's coach chatting with your athlete on Telegram. You know his profile and today's live numbers (provided as JSON). Reply conversationally in his corner — direct, warm, whiteboard tone, no emojis, under 120 words.
+const ROUTER_SYSTEM = `${COACH_PERSONA} You're chatting with your athlete on Telegram. You know his profile and today's live numbers (provided as JSON). Reply conversationally in his corner — direct, warm, no emojis, under 120 words.
 
 If his message asks to LOG something, include it in "actions" (and confirm naturally in the reply): counters (pullups/pushups/squats/abs/pages use activityKey with a positive or negative delta), weight in lb, meals (pass his food description through verbatim), workouts (pass his description verbatim). Multiple actions allowed. Questions about progress, training, food, or anything else: just answer from the data — never invent numbers.
 
@@ -170,9 +170,9 @@ export async function POST(req: NextRequest) {
       // Claim flow: first chat to present the PIN becomes the owner.
       if (msg.text && pinMatches(msg.text.trim())) {
         setOwnerChatId(chatId);
-        await sendTelegram(chatId, "Claimed. This chat is now your Drillbook coach — talk to me: log meals, workouts, reps, or just ask how you're doing.");
+        await sendTelegram(chatId, "About time, kid. This is Coach Gus — log your meals, workouts, and reps right here, or just tell me what's going on.");
       } else {
-        await sendTelegram(chatId, "Send the Drillbook PIN to claim this bot.");
+        await sendTelegram(chatId, "Send the PIN to claim this bot.");
       }
       return NextResponse.json({ ok: true });
     }

@@ -10,8 +10,15 @@ export async function register() {
 
   const timezone = process.env.CRON_TIMEZONE ?? "America/New_York";
 
-  // 8pm daily — late enough to be a useful "day's almost gone" nudge.
-  cron.schedule("0 20 * * *", () => runDailyNudge().catch((e) => console.error("[cron] daily-nudge:", e)), {
+  // Three daily touchpoints: morning briefing, midday checkpoint, evening
+  // close-out (the evening run also writes the calendar event).
+  cron.schedule("30 7 * * *", () => runDailyNudge(false, "morning").catch((e) => console.error("[cron] nudge-am:", e)), {
+    timezone,
+  });
+  cron.schedule("0 13 * * *", () => runDailyNudge(false, "midday").catch((e) => console.error("[cron] nudge-noon:", e)), {
+    timezone,
+  });
+  cron.schedule("0 20 * * *", () => runDailyNudge(false, "evening").catch((e) => console.error("[cron] nudge-pm:", e)), {
     timezone,
   });
   // 6pm Sunday — weekly coach writeup for the coming week.
@@ -19,5 +26,5 @@ export async function register() {
     timezone,
   });
 
-  console.log(`[cron] scheduled daily-nudge 20:00 and weekly-coach Sun 18:00 (${timezone})`);
+  console.log(`[cron] scheduled nudges 07:30/13:00/20:00 and weekly-coach Sun 18:00 (${timezone})`);
 }

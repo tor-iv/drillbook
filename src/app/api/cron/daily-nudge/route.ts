@@ -10,8 +10,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   try {
-    const result = await runDailyNudge(true);
-    return NextResponse.json({ ok: true, result });
+    const slotParam = req.nextUrl.searchParams.get("slot");
+    const slot = slotParam === "morning" || slotParam === "midday" ? slotParam : "evening";
+    const result = await runDailyNudge(true, slot);
+    return NextResponse.json({ ok: true, slot, result });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }
