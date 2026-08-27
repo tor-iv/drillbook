@@ -8,7 +8,15 @@ const dbPath = process.env.DB_PATH ?? "./data/drillbook.db";
 mkdirSync(dirname(dbPath), { recursive: true });
 
 const sqlite = new Database(dbPath);
-sqlite.pragma("journal_mode = WAL");
+// `next build` collects page data with parallel workers that all module-init
+// this file against the build-placeholder DB; the WAL pragma needs an
+// exclusive lock and can throw SQLITE_BUSY in that race. Harmless there —
+// the single runtime process always wins it.
+try {
+  sqlite.pragma("journal_mode = WAL");
+} catch (e) {
+  console.warn("[db] WAL pragma skipped:", e);
+}
 sqlite.pragma("foreign_keys = ON");
 
 export const db = drizzle(sqlite, { schema });
