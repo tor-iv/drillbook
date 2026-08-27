@@ -46,9 +46,14 @@ export async function estimateMeal(input: {
     text: input.description?.trim() ? `Meal: ${input.description.trim()}` : "Estimate this meal.",
   });
 
+  // Sonnet 5+ thinks adaptively by default — the budget must cover thinking
+  // plus the answer, and low effort keeps a simple estimate cheap. Haiku 4.5
+  // rejects the effort param, so only send it to models that support it.
+  const model = foodModel();
   const response = await claudeClient().messages.create({
-    model: foodModel(),
-    max_tokens: 256,
+    model,
+    max_tokens: 1500,
+    ...(model.includes("haiku") ? {} : { output_config: { effort: "low" as const } }),
     system: SYSTEM,
     messages: [{ role: "user", content }],
   });

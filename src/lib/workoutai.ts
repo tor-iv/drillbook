@@ -54,9 +54,13 @@ export async function parseWorkouts(input: {
     text: input.description?.trim() ? `Workout: ${input.description.trim()}` : "Extract the workouts shown.",
   });
 
+  // Budget covers adaptive thinking on Sonnet-class models; Haiku 4.5
+  // rejects the effort param, so only send it where supported.
+  const model = workoutModel();
   const response = await claudeClient().messages.create({
-    model: workoutModel(),
-    max_tokens: 512,
+    model,
+    max_tokens: 1500,
+    ...(model.includes("haiku") ? {} : { output_config: { effort: "low" as const } }),
     system: SYSTEM,
     messages: [{ role: "user", content }],
   });
