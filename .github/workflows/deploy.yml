@@ -29,9 +29,11 @@ jobs:
             cd /opt/drillbook
             git pull origin main
             cd /opt/fieldhouse
-            # Build first so a build error fails loudly; migrate before the
-            # recreate so the schema is current when the new container starts.
-            docker compose build drillbook
+            # Build BOTH images first (the migrate image bakes in drizzle/ —
+            # skipping it once shipped stale migrations that silently
+            # "applied" an old set); migrate before the recreate so the
+            # schema is current when the new container starts.
+            docker compose build drillbook drillbook-migrate
             docker compose run --rm drillbook-migrate
             docker compose up -d --force-recreate drillbook
             docker image prune -f
