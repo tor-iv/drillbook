@@ -6,7 +6,7 @@ export function smsConfigured(): boolean {
   return !!(
     process.env.TWILIO_ACCOUNT_SID &&
     process.env.TWILIO_AUTH_TOKEN &&
-    process.env.TWILIO_FROM_NUMBER &&
+    (process.env.TWILIO_MESSAGING_SERVICE_SID || process.env.TWILIO_FROM_NUMBER) &&
     process.env.NUDGE_SMS_TO
   );
 }
@@ -23,9 +23,13 @@ export async function sendNudgeSms(body: string): Promise<void> {
       Authorization: `Basic ${Buffer.from(`${sid}:${process.env.TWILIO_AUTH_TOKEN}`).toString("base64")}`,
       "Content-Type": "application/x-www-form-urlencoded",
     },
+    // Prefer the Messaging Service (it carries the A2P campaign registration);
+    // bare From number is the fallback.
     body: new URLSearchParams({
       To: process.env.NUDGE_SMS_TO!,
-      From: process.env.TWILIO_FROM_NUMBER!,
+      ...(process.env.TWILIO_MESSAGING_SERVICE_SID
+        ? { MessagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID }
+        : { From: process.env.TWILIO_FROM_NUMBER! }),
       Body: body.slice(0, 1500),
     }),
   });
