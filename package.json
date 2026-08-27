@@ -1,0 +1,48 @@
+{
+  "name": "drillbook",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.17.1",
+  "pnpm": {
+    "onlyBuiltDependencies": ["better-sqlite3"]
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "db:seed": "tsx scripts/seed-activities.ts",
+    "import:health": "tsx scripts/import-apple-health.ts"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.10.0",
+    "clsx": "^2.1.1",
+    "drizzle-orm": "^0.45.2",
+    "jose": "^6.0.11",
+    "nanoid": "^6.0.1",
+    "next": "16.1.1",
+    "node-cron": "^4.2.1",
+    "openai": "^6.42.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "resend": "^6.22.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/sax": "^1.2.7",
+    "drizzle-kit": "^0.31.10",
+    "eslint": "^9",
+    "eslint-config-next": "16.1.1",
+    "sax": "^1.4.1",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.12",
+    "typescript": "^5"
+  }
+}

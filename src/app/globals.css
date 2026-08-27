@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+@theme {
+  --color-paper: #f7f4ec;
+  --color-ink: #16130d;
+  --color-rule: #bfd0de;
+  --color-margin: #d6482f;
+  --color-highlight: #ffe24a;
+  --color-pencil: #8b8578;
+  --font-display: var(--font-staatliches), "Arial Narrow", sans-serif;
+  --font-marker: var(--font-marker), "Comic Sans MS", cursive;
+}
+
+html {
+  background: var(--color-paper);
+}
+
+body {
+  color: var(--color-ink);
+  background: var(--color-paper);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Ruled notebook paper: horizontal blue rules + one red margin line.
+   The 2rem rule spacing is the page's baseline grid. */
+.paper {
+  background-image:
+    linear-gradient(to right, transparent 0, transparent 2.25rem, var(--color-margin) 2.25rem, var(--color-margin) calc(2.25rem + 2px), transparent calc(2.25rem + 2px)),
+    repeating-linear-gradient(to bottom, transparent 0, transparent calc(2rem - 1px), var(--color-rule) calc(2rem - 1px), var(--color-rule) 2rem);
+  background-attachment: local;
+}
+
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
+}
+
+.font-marker {
+  font-family: var(--font-marker);
+}
+
+/* Marker-box: the whiteboard cell an activity lives in. */
+.marker-box {
+  border: 2px solid var(--color-ink);
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: 3px 3px 0 0 var(--color-ink);
+}
+
+.btn-ink {
+  font-family: var(--font-display);
+  border: 2px solid var(--color-ink);
+  background: var(--color-ink);
+  color: var(--color-paper);
+  box-shadow: 3px 3px 0 0 rgba(22, 19, 13, 0.35);
+}
+.btn-ink:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 0 rgba(22, 19, 13, 0.35);
+}
+
+.btn-paper {
+  font-family: var(--font-display);
+  border: 2px solid var(--color-ink);
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--color-ink);
+}
+.btn-paper:active {
+  transform: translate(1px, 1px);
+}
+
+/* Yellow highlighter swipe behind a met goal. */
+.highlighted {
+  background: linear-gradient(104deg, transparent 0.5%, var(--color-highlight) 3%, var(--color-highlight) 97%, transparent 99%);
+  box-decoration-break: clone;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-margin);
+  outline-offset: 2px;
+}

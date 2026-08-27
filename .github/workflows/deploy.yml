@@ -1,0 +1,37 @@
+# Deploy to the Hetzner box on push to main.
+# Repository secrets (Settings → Secrets and variables → Actions):
+#   HETZNER_IP           — public IPv4 of the server
+#   SSH_PRIVATE_KEY      — private key whose public half is in the server's authorized_keys
+#   SSH_HOST_FINGERPRINT — SHA256 fingerprint of the server's *ECDSA* host key
+#                          (appleboy's Go SSH client negotiates ECDSA, not ed25519)
+
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        with:
+          host: ${{ secrets.HETZNER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SSH_HOST_FINGERPRINT }}
+          command_timeout: 20m
+          script: |
+            set -e
+            cd /opt/drillbook
+            git pull origin main
+            cd /opt/fieldhouse
+            # Build first so a build error fails loudly; migrate before the
+            # recreate so the schema is current when the new container starts.
+            docker compose build drillbook
+            docker compose run --rm drillbook-migrate
+            docker compose up -d --force-recreate drillbook
+            docker image prune -f
