@@ -4,7 +4,9 @@
   "private": true,
   "packageManager": "pnpm@10.17.1",
   "pnpm": {
-    "onlyBuiltDependencies": ["better-sqlite3"]
+    "onlyBuiltDependencies": [
+      "better-sqlite3"
+    ]
   },
   "scripts": {
     "dev": "next dev",
@@ -17,6 +19,7 @@
     "import:health": "tsx scripts/import-apple-health.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.121.0",
     "better-sqlite3": "^12.10.0",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.2",

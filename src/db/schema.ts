@@ -58,6 +58,21 @@ export const photos = sqliteTable("photos", {
   createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
 });
 
+// Food log: one row per meal/snack, calories guesstimated by a vision/text
+// model from a photo or a quick (often dictated) description.
+export const meals = sqliteTable("meals", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  date: text("date").notNull(), // 'YYYY-MM-DD'
+  name: text("name").notNull(), // short label the model extracts ("chicken burrito")
+  description: text("description"), // what the user typed/said, null for photo-only
+  calories: real("calories").notNull(),
+  protein: real("protein"),
+  method: text("method", { enum: ["photo", "text"] }).notNull(),
+  photoPath: text("photo_path"), // under UPLOAD_DIR/meals, null for text entries
+  model: text("model").notNull(),
+  createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+});
+
 export const aiNudges = sqliteTable("ai_nudges", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   date: text("date").notNull(),

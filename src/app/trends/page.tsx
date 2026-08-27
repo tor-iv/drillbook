@@ -5,6 +5,12 @@ import { db, schema } from "@/db";
 import { dateRange, localDate } from "@/lib/dates";
 import { DayChart, type DayPoint } from "@/components/day-chart";
 
+const LOG_DAYS = 14;
+
+function shortLabel(label: string): string {
+  return label.split(" ")[0].replace("-", "").toLowerCase();
+}
+
 export const dynamic = "force-dynamic";
 
 const RANGES = [7, 30, 90] as const;
@@ -67,6 +73,8 @@ export default async function TrendsPage({
         </div>
       </header>
 
+      <DayLog acts={acts} />
+
       <div className="flex flex-col gap-6">
         {acts.map((a) => {
           const mine = new Map(rows.filter((r) => r.activityId === a.id).map((r) => [r.date, r.value]));
@@ -100,5 +108,72 @@ export default async function TrendsPage({
         })}
       </div>
     </main>
+  );
+}
+
+// One line per recent day: everything done, in the order it matters.
+function DayLog({ acts }: { acts: (typeof schema.activities.$inferSelect)[] }) {
+  const today = localDate();
+  const days = dateRange(today, LOG_DAYS);
+  const from = days[0];
+
+  const entryRows =
+    acts.length > 0
+      ? db
+          .select()
+          .from(schema.entries)
+          .where(
+            and(
+              inArray(
+                schema.entries.activityId,
+                acts.map((a) => a.id),
+              ),
+              gte(schema.entries.date, from),
+              lte(schema.entries.date, today),
+            ),
+          )
+          .all()
+      : [];
+  const workoutRows = db
+    .select()
+    .from(schema.workouts)
+    .where(and(gte(schema.workouts.date, from), lte(schema.workouts.date, today)))
+    .all();
+  const mealRows = db
+    .select()
+    .from(schema.meals)
+    .where(and(gte(schema.meals.date, from), lte(schema.meals.date, today)))
+    .all();
+
+  const byId = new Map(acts.map((a) => [a.id, a]));
+  const lines = [...days].reverse().map((date) => {
+    const parts: string[] = [];
+    for (const e of entryRows.filter((r) => r.date === date)) {
+      const a = byId.get(e.activityId);
+      if (!a || e.value <= 0) continue;
+      parts.push(a.kind === "measure" ? `${e.value} ${a.unit}` : `${e.value} ${shortLabel(a.label)}`);
+    }
+    for (const w of workoutRows.filter((r) => r.date === date)) {
+      parts.push(w.distanceMi ? `${w.type} ${w.distanceMi}mi` : `${w.type}${w.durationMin ? ` ${Math.round(w.durationMin)}m` : ""}`);
+    }
+    const cal = mealRows.filter((m) => m.date === date).reduce((s, m) => s + m.calories, 0);
+    if (cal > 0) parts.push(`${Math.round(cal)} cal`);
+    return { date, text: parts.join(" · ") };
+  });
+
+  return (
+    <section className="marker-box mb-6 p-4">
+      <h2 className="font-display mb-2 text-2xl leading-none">Day log</h2>
+      <dl className="flex flex-col gap-1 text-sm">
+        {lines.map((l) => (
+          <div key={l.date} className="flex gap-3">
+            <dt className="font-display w-16 shrink-0 text-pencil">
+              {new Date(`${l.date}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+            </dt>
+            <dd className={l.text ? "" : "text-pencil"}>{l.text || "—"}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
   );
 }

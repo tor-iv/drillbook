@@ -28,12 +28,19 @@ export default function Dashboard() {
     <main>
       <header className="mb-6">
         <h1 className="font-display text-5xl leading-none">Drillbook</h1>
-        <p className="font-marker mt-1 text-pencil">
+        <p className="mt-1 text-sm text-pencil">
           {dateLabel} — {openCount === 0 ? "all drills closed" : `${openCount} drill${openCount > 1 ? "s" : ""} open`}
         </p>
       </header>
 
       {nudge && <CoachNote content={nudge.content} />}
+
+      {status.calories != null && (
+        <a href="/food" className="marker-box mb-5 flex items-baseline justify-between p-3">
+          <span className="font-display text-lg leading-none">Food</span>
+          <span className="text-sm text-pencil">{status.calories} cal today →</span>
+        </a>
+      )}
 
       <div className="flex flex-col gap-5">
         {status.activities.map((a) =>

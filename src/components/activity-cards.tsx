@@ -49,7 +49,7 @@ export function CounterCard({ activity }: { activity: ActivityStatus }) {
       </div>
 
       <div className="mt-2 flex items-end justify-between gap-2">
-        <p className="font-marker whitespace-nowrap text-5xl leading-none tabular-nums" aria-live="polite">
+        <p className="font-display whitespace-nowrap text-6xl leading-none tabular-nums" aria-live="polite">
           {count}
           {activity.goal != null && (
             <span className="text-2xl text-pencil"> / {activity.goal}</span>
@@ -116,7 +116,7 @@ export function MeasureCard({ activity }: { activity: ActivityStatus }) {
             setSaved(false);
           }}
           placeholder="—"
-          className="font-marker w-36 border-b-2 border-ink bg-transparent text-5xl leading-none tabular-nums focus:outline-none"
+          className="font-display w-36 border-b-2 border-ink bg-transparent text-5xl leading-none tabular-nums focus:outline-none"
           aria-label={`${activity.label} in ${activity.unit}`}
         />
         <span className="text-pencil">{activity.unit}</span>

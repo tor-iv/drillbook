@@ -20,6 +20,7 @@ export async function runDailyNudge(force = false): Promise<string> {
         .filter((a) => a.kind === "counter")
         .map((a) => ({ label: a.label, done: a.done ?? 0, goal: a.goal, unit: a.unit, streak: a.streak })),
       bodyWeightLb: status.activities.find((a) => a.key === "bodyweight")?.done ?? undefined,
+      caloriesEatenToday: status.calories ?? undefined,
     });
   } else {
     // Template fallback so the pipeline works before the API key exists.

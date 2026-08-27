@@ -26,7 +26,7 @@ export default function CoachPage() {
           {writeups.map((w) => (
             <article key={w.id} className="marker-box p-4">
               <h2 className="font-display text-xl text-margin">week of {w.date}</h2>
-              <div className="font-marker mt-2 whitespace-pre-wrap text-sm leading-relaxed">{w.content}</div>
+              <div className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">{w.content}</div>
             </article>
           ))}
         </div>

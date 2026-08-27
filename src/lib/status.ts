@@ -18,6 +18,7 @@ export type DayStatus = {
   date: string;
   activities: ActivityStatus[];
   behind: boolean; // any active counter with a goal not yet met
+  calories: number | null; // today's food log total, null if nothing logged
   summary: string; // one-liner for the Shortcut notification / calendar event
 };
 
@@ -115,17 +116,21 @@ export function getTodayStatus(today: string = localDate()): DayStatus {
   const counters = statuses.filter((s) => s.kind === "counter" && s.goal != null);
   const behind = counters.some((s) => !s.met);
 
+  const mealRows = db.select().from(schema.meals).where(eq(schema.meals.date, today)).all();
+  const calories = mealRows.length > 0 ? Math.round(mealRows.reduce((s, m) => s + m.calories, 0)) : null;
+
   const parts = statuses
     .filter((s) => s.done != null && s.kind === "counter")
     .map((s) => `${s.done} ${s.unit === "reps" ? s.label.toLowerCase() : s.unit}`);
   const missing = counters.filter((s) => !s.met).map((s) => `${s.label} ${(s.done ?? 0)}/${s.goal}`);
+  const calNote = calories != null ? ` · ${calories} cal eaten` : "";
   const summary = behind
-    ? `Behind: ${missing.join(", ")}`
+    ? `Behind: ${missing.join(", ")}${calNote}`
     : parts.length > 0
-      ? `All goals hit — ${parts.join(", ")}`
-      : "Nothing logged yet today";
+      ? `All goals hit — ${parts.join(", ")}${calNote}`
+      : `Nothing logged yet today${calNote}`;
 
-  return { date: today, activities: statuses, behind, summary };
+  return { date: today, activities: statuses, behind, calories, summary };
 }
 
 export type WeekStatus = {
@@ -134,6 +139,7 @@ export type WeekStatus = {
   totals: { label: string; unit: string; total: number; weeklyGoal: number | null; daysMet: number }[];
   weight: { date: string; value: number }[];
   workouts: { type: string; count: number; totalMin: number; totalMi: number }[];
+  dailyCalories: { date: string; calories: number }[];
 };
 
 export function getWeekStatus(endDate: string = localDate()): WeekStatus {
@@ -182,5 +188,16 @@ export function getWeekStatus(endDate: string = localDate()): WeekStatus {
   }
   const workouts = [...byType.entries()].map(([type, t]) => ({ type, ...t }));
 
-  return { from, to: endDate, totals, weight, workouts };
+  const mealRows = db
+    .select()
+    .from(schema.meals)
+    .where(and(gte(schema.meals.date, from), lte(schema.meals.date, endDate)))
+    .all();
+  const calByDate = new Map<string, number>();
+  for (const m of mealRows) calByDate.set(m.date, (calByDate.get(m.date) ?? 0) + m.calories);
+  const dailyCalories = [...calByDate.entries()]
+    .map(([date, calories]) => ({ date, calories: Math.round(calories) }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  return { from, to: endDate, totals, weight, workouts, dailyCalories };
 }

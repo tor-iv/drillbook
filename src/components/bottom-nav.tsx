@@ -6,8 +6,9 @@ import clsx from "clsx";
 
 const TABS = [
   { href: "/", label: "Today" },
+  { href: "/food", label: "Food" },
   { href: "/trends", label: "Trends" },
-  { href: "/photos", label: "Photos" },
+  { href: "/photos", label: "Pics" },
   { href: "/coach", label: "Coach" },
   { href: "/settings", label: "Setup" },
 ];
@@ -26,7 +27,7 @@ export function BottomNav() {
               key={t.href}
               href={t.href}
               className={clsx(
-                "font-display flex-1 py-3 text-center text-lg leading-none",
+                "font-display flex-1 py-3 text-center text-base leading-none",
                 active ? "bg-ink text-paper" : "text-ink",
               )}
             >

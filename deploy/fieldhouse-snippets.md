@@ -32,6 +32,7 @@ cd /opt && git clone git@github.com:tor-iv/drillbook.git
       RESEND_FROM_EMAIL: "Drillbook <nudge@foefinder.me>"
       NUDGE_EMAIL_TO: vcox484@gmail.com
       DEEPSEEK_API_KEY: ${DRILLBOOK_DEEPSEEK_API_KEY}
+      ANTHROPIC_API_KEY: ${DRILLBOOK_ANTHROPIC_API_KEY}
       GOOGLE_CLIENT_ID: ${DRILLBOOK_GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${DRILLBOOK_GOOGLE_CLIENT_SECRET}
       HTTPS: "true"
@@ -66,6 +67,7 @@ DRILLBOOK_SHORTCUT_API_TOKEN=<openssl rand -hex 24>
 DRILLBOOK_CRON_SECRET=<openssl rand -hex 24>
 DRILLBOOK_RESEND_API_KEY=<reuse foefinder's Resend key>
 DRILLBOOK_DEEPSEEK_API_KEY=<reuse clay-oracle's DeepSeek key>
+DRILLBOOK_ANTHROPIC_API_KEY=<console.anthropic.com key — food photo calorie estimates>
 DRILLBOOK_GOOGLE_CLIENT_ID=      # after docs/google-setup.md
 DRILLBOOK_GOOGLE_CLIENT_SECRET=  # after docs/google-setup.md
 ```
