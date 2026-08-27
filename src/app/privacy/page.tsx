@@ -26,9 +26,9 @@ export default function PrivacyPage() {
         <p>
           <strong>
             No mobile information will be shared with third parties or affiliates for marketing or promotional
-            purposes.
-          </strong>{" "}
-          Phone numbers and text messaging originator opt-in data and consent are not shared with any third parties.
+            purposes. All the above categories exclude text messaging originator opt-in data and consent; this
+            information will not be shared with any third parties.
+          </strong>
         </p>
 
         <h2 className="font-display text-2xl">Data</h2>
