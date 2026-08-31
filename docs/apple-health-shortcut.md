@@ -3,7 +3,21 @@
 Two Shortcuts connect your iPhone to Drillbook. Budget ~10 minutes.
 You'll need your `SHORTCUT_API_TOKEN` (from the server `.env`).
 
-## 1. "Drillbook Sync" — nightly Apple Health push
+## 1. "Tally Sync" — nightly Apple Health push (EASY 3-action version)
+
+The server now AI-parses raw Shortcut output, so the minimal version is:
+
+1. **Find Workouts** where *Start Date* *is today* → **Find Health Samples**
+   (Weight, latest 1) — just stack both actions.
+2. **Text** action combining both results (drag the two magic variables in).
+3. **Get Contents of URL**: POST `https://tally.tors-bored.com/api/health-sync`,
+   header `Authorization: Bearer <SHORTCUT_API_TOKEN>`, JSON body
+   `{"dump": <Text>}`.
+
+Automate: Time of Day 9:55 PM → Run Immediately. Done. (The precise
+hand-built version below still works if you prefer exact control.)
+
+## 1b. Original hand-built version
 
 Shortcuts app → **+** → name it **Drillbook Sync**.
 
@@ -24,7 +38,7 @@ Shortcuts app → **+** → name it **Drillbook Sync**.
    - `bodyWeightLb` (Number): the weight value from step 2
    - `workouts`: the `workoutList` variable (type Array)
 6. **Get Contents of URL**:
-   - URL: `https://drillbook.tors-bored.com/api/health-sync`
+   - URL: `https://tally.tors-bored.com/api/health-sync`
    - Method: **POST**
    - Headers: `Authorization` = `Bearer <SHORTCUT_API_TOKEN>`
    - Request Body: **JSON** → the dictionary from step 5
@@ -40,7 +54,7 @@ Re-running is safe — the server upserts, never duplicates.
 New Shortcut, name it **Drillbook Status**.
 
 1. **Get Contents of URL**:
-   - URL: `https://drillbook.tors-bored.com/api/status`
+   - URL: `https://tally.tors-bored.com/api/status`
    - Method: **GET**
    - Headers: `Authorization` = `Bearer <SHORTCUT_API_TOKEN>`
 2. **Get Dictionary Value** → key `summary`.
@@ -65,7 +79,7 @@ Add `--dry-run` first to see what it found. The export in iCloud is from May
 ## 3. Voice logging with Siri ("Hey Siri, log a meal")
 
 Create one Shortcut per phrase — each is 3 actions: **Dictate Text** →
-**Get Contents of URL** (POST `https://drillbook.tors-bored.com/api/log`,
+**Get Contents of URL** (POST `https://tally.tors-bored.com/api/log`,
 header `Authorization: Bearer <SHORTCUT_API_TOKEN>`, JSON body below with the
 dictated text) → **Speak** the `spoken` field from the response.
 

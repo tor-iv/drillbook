@@ -3,6 +3,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db, schema } from "@/db";
 import { hasShortcutToken } from "@/lib/auth";
+import { askClaudeJson } from "@/lib/claude";
+import { localDate } from "@/lib/dates";
+import { workoutModel } from "@/lib/workoutai";
 
 const workoutSchema = z.object({
   type: z.enum(["run", "swim", "climb", "lift", "other"]),
@@ -18,8 +21,32 @@ const daySchema = z.object({
   workouts: z.array(workoutSchema).default([]),
 });
 
-// Single-day (the nightly Shortcut) or batch (the history import script).
-const bodySchema = z.union([daySchema, z.object({ days: z.array(daySchema).max(500) })]);
+// Single-day (the nightly Shortcut), batch (the history import script), or a
+// raw text dump from a minimal Shortcut — the AI structures the dump so the
+// phone side stays dumb and simple.
+const bodySchema = z.union([
+  daySchema,
+  z.object({ days: z.array(daySchema).max(500) }),
+  z.object({ dump: z.string().min(3).max(20000) }),
+]);
+
+const DUMP_SYSTEM = `You convert raw Apple Health text (output of iOS Shortcuts "Find Workouts" / "Find Health Samples", any formatting) into JSON. Extract today's workouts and the most recent body weight if present. Map activity types: running->run, swimming->swim, climbing/bouldering->climb, strength/functional training->lift, anything else->other. Convert kg to lb (x2.2046) and km to miles (x0.6214). Only report numbers present in the text — use null otherwise. Reply with ONLY JSON: {"bodyWeightLb": <number|null>, "workouts": [{"type":"run|swim|climb|lift|other","durationMin":<number|null>,"distanceMi":<number|null>,"calories":<number|null>,"startedAt":"<ISO timestamp or null>"}]}`;
+
+const dumpResultSchema = z.object({
+  bodyWeightLb: z.number().positive().nullable().catch(null),
+  workouts: z
+    .array(
+      z.object({
+        type: z.enum(["run", "swim", "climb", "lift", "other"]),
+        durationMin: z.number().nonnegative().nullable().catch(null),
+        distanceMi: z.number().nonnegative().nullable().catch(null),
+        calories: z.number().nonnegative().nullable().catch(null),
+        startedAt: z.string().nullable().catch(null),
+      }),
+    )
+    .max(20)
+    .catch([]),
+});
 
 function upsertDay(day: z.infer<typeof daySchema>): { workouts: number; weight: boolean } {
   let wroteWeight = false;
@@ -73,7 +100,24 @@ export async function POST(req: NextRequest) {
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: parsed.error.message }, { status: 400 });
 
-  const days = "days" in parsed.data ? parsed.data.days : [parsed.data];
+  let payload = parsed.data;
+  if ("dump" in payload) {
+    const today = localDate();
+    const ai = dumpResultSchema.parse(
+      await askClaudeJson({ model: workoutModel(), system: DUMP_SYSTEM, content: payload.dump }),
+    );
+    payload = {
+      date: today,
+      bodyWeightLb: ai.bodyWeightLb,
+      workouts: ai.workouts.map((w, i) => ({
+        ...w,
+        // Synthetic-but-stable startedAt when the dump lacks timestamps.
+        startedAt: w.startedAt ?? `${today}Tdump-${i}`,
+      })),
+    };
+  }
+
+  const days = "days" in payload ? payload.days : [payload];
   let workoutCount = 0;
   let weightCount = 0;
   // One transaction per request: a 500-day import batch is a single fsync,
