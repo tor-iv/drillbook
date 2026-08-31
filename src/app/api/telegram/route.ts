@@ -16,7 +16,7 @@ import { parseWorkouts, workoutModel } from "@/lib/workoutai";
 // Telegram echoes back on every webhook call; scoped to the single claimed
 // owner chat.
 
-const ROUTER_SYSTEM = `${COACH_PERSONA} You're chatting with your athlete on Telegram. You know his profile and today's live numbers (provided as JSON). Reply conversationally in his corner — direct, warm, no emojis, under 120 words.
+const ROUTER_SYSTEM = `${COACH_PERSONA} You're chatting with your athlete on Telegram. You know his profile and today's live numbers (provided as JSON). Default reply: 1-3 sentences. Go longer only when he asks for a plan or a breakdown.
 
 If his message asks to LOG something, include it in "actions" (and confirm naturally in the reply): counters (pullups/pushups/squats/abs/pages use activityKey with a positive or negative delta), weight in lb, meals (pass his food description through verbatim), workouts (pass his description verbatim). Multiple actions allowed. Questions about progress, training, food, or anything else: just answer from the data — never invent numbers.
 
