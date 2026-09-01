@@ -6,6 +6,7 @@ import { askClaudeJson } from "@/lib/claude";
 import { athleteProfile, COACH_PERSONA, coachModel } from "@/lib/coach";
 import { localDate } from "@/lib/dates";
 import { getDayEnergy } from "@/lib/energy";
+import { createEvent, googleConnected } from "@/lib/google";
 import { estimateMeal, foodModel } from "@/lib/foodai";
 import { pinMatches } from "@/lib/auth";
 import { getTodayStatus } from "@/lib/status";
@@ -16,19 +17,26 @@ import { parseWorkouts, workoutModel } from "@/lib/workoutai";
 // Telegram echoes back on every webhook call; scoped to the single claimed
 // owner chat.
 
-const ROUTER_SYSTEM = `${COACH_PERSONA} You're chatting with your athlete on Telegram. You know his profile and today's live numbers (provided as JSON). Default reply: 1-3 sentences. Go longer only when he asks for a plan or a breakdown.
+const ROUTER_SYSTEM = `${COACH_PERSONA} You're chatting with your athlete on Telegram. You know his profile and today's live numbers (provided as JSON, including today's date). Default reply: 1-3 sentences. Go longer only when he asks for a plan or a breakdown.
 
-If his message asks to LOG something, include it in "actions" (and confirm naturally in the reply): counters (pullups/pushups/squats/abs/pages use activityKey with a positive or negative delta), weight in lb, meals (pass his food description through verbatim), workouts (pass his description verbatim). Multiple actions allowed. Questions about progress, training, food, or anything else: just answer from the data — never invent numbers.
+If his message asks to LOG something, include it in "actions" (and confirm naturally in the reply): counters (pullups/pushups/squats/abs/pages use activityKey with a positive or negative delta), weight in lb, meals (pass his food description through verbatim), workouts (pass his description verbatim). If he asks to PUT SOMETHING ON HIS CALENDAR, add a calendar action: date as YYYY-MM-DD (resolve "tomorrow"/"Friday" from today's date), startTime/endTime as 24h HH:MM local, omit times for all-day. Multiple actions allowed. Questions about progress, training, food, or anything else: just answer from the data — never invent numbers.
 
-Be concrete: when he asks what to do or eat, give exact workouts (sets/reps/distances) or example meals with real foods and rough calorie/protein numbers — never vague advice or motivational filler.
+Workout advice covers TODAY only — exact sets/reps/distances for today's session. The Sunday weekly plan owns the week; don't sketch multi-day plans unless he explicitly asks for one. Meal suggestions only when he asks — don't volunteer food advice, but when asked, give real meals with rough calorie/protein numbers. Never vague advice or motivational filler.
 
-Return ONLY JSON: {"reply": "<message>", "actions": [{"type":"counter","activityKey":"pushups","delta":20} | {"type":"weight","value":199.5} | {"type":"meal","description":"..."} | {"type":"workout","description":"..."}]}. "actions" may be empty.`;
+Return ONLY JSON: {"reply": "<message>", "actions": [{"type":"counter","activityKey":"pushups","delta":20} | {"type":"weight","value":199.5} | {"type":"meal","description":"..."} | {"type":"workout","description":"..."} | {"type":"calendar","title":"Climbing","date":"2026-09-02","startTime":"18:00","endTime":"19:30"}]}. "actions" may be empty.`;
 
 const actionSchema = z.union([
   z.object({ type: z.literal("counter"), activityKey: z.string(), delta: z.number() }),
   z.object({ type: z.literal("weight"), value: z.number().positive() }),
   z.object({ type: z.literal("meal"), description: z.string().min(1) }),
   z.object({ type: z.literal("workout"), description: z.string().min(1) }),
+  z.object({
+    type: z.literal("calendar"),
+    title: z.string().min(1),
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    startTime: z.string().regex(/^\d{2}:\d{2}$/).nullish(),
+    endTime: z.string().regex(/^\d{2}:\d{2}$/).nullish(),
+  }),
 ]);
 const routerSchema = z.object({
   reply: z.string().min(1),
@@ -60,6 +68,18 @@ async function runAction(a: Action): Promise<string> {
       .where(sql`${schema.entries.activityId} = ${activity.id} AND ${schema.entries.date} = ${date}`)
       .get();
     return `✓ ${activity.label}: ${row?.value ?? 0}${activity.dailyTarget ? `/${activity.dailyTarget}` : ""}`;
+  }
+  if (a.type === "calendar") {
+    if (!googleConnected()) return "(calendar not connected — hit Connect in Settings first)";
+    const ok = await createEvent({
+      title: a.title,
+      date: a.date,
+      startTime: a.startTime ?? null,
+      endTime: a.endTime ?? null,
+    });
+    return ok
+      ? `✓ Calendar: ${a.title} on ${a.date}${a.startTime ? ` at ${a.startTime}` : ""}`
+      : "(calendar write failed)";
   }
   if (a.type === "meal") {
     const est = await estimateMeal({ description: a.description });

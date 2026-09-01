@@ -111,3 +111,50 @@ export async function upsertDailyEvent(date: string, summary: string): Promise<b
   console.error("[google] event update failed:", put.status, await put.text());
   return false;
 }
+
+/**
+ * Insert a one-off event (Telegram "put climbing on my calendar" requests).
+ * Timed when startTime is given (endTime defaults to +1h), all-day otherwise.
+ */
+export async function createEvent(opts: {
+  title: string;
+  date: string; // YYYY-MM-DD
+  startTime?: string | null; // HH:MM, 24h, local
+  endTime?: string | null;
+}): Promise<boolean> {
+  const token = await accessToken();
+  if (!token) return false;
+
+  const row = db.select().from(schema.googleTokens).get();
+  const calendarId = encodeURIComponent(row?.calendarId ?? "primary");
+  const timeZone = process.env.CRON_TIMEZONE ?? "America/New_York";
+
+  let start: object;
+  let end: object;
+  if (opts.startTime) {
+    // Default to +1h, capped at 23:59 so the end never wraps before the start.
+    const mins = Math.min(
+      Number(opts.startTime.slice(0, 2)) * 60 + Number(opts.startTime.slice(3, 5)) + 60,
+      23 * 60 + 59,
+    );
+    const endTime =
+      opts.endTime ??
+      `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
+    start = { dateTime: `${opts.date}T${opts.startTime}:00`, timeZone };
+    end = { dateTime: `${opts.date}T${endTime}:00`, timeZone };
+  } else {
+    start = { date: opts.date };
+    end = { date: opts.date };
+  }
+
+  const res = await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ summary: opts.title, start, end }),
+    },
+  );
+  if (!res.ok) console.error("[google] createEvent failed:", res.status, await res.text());
+  return res.ok;
+}
