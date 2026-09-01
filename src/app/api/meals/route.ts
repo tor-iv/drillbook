@@ -32,6 +32,32 @@ export async function GET(req: NextRequest) {
 // one required), optional `date`.
 export async function POST(req: NextRequest) {
   if (!(await isAuthenticated())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  // JSON body {cloneId} re-logs a past meal verbatim — exact repeat, no AI
+  // (so this branch stays above the AI-configured gate).
+  if (req.headers.get("content-type")?.includes("application/json")) {
+    const body = (await req.json().catch(() => null)) as { cloneId?: number } | null;
+    const cloneId = Number(body?.cloneId);
+    if (!Number.isInteger(cloneId)) return NextResponse.json({ error: "cloneId required" }, { status: 400 });
+    const src = db.select().from(schema.meals).where(eq(schema.meals.id, cloneId)).get();
+    if (!src) return NextResponse.json({ error: "not found" }, { status: 404 });
+    const row = db
+      .insert(schema.meals)
+      .values({
+        date: localDate(),
+        name: src.name,
+        description: src.description,
+        calories: src.calories,
+        protein: src.protein,
+        method: "text",
+        model: "clone",
+        itemsJson: src.itemsJson,
+      })
+      .returning()
+      .get();
+    return NextResponse.json({ ok: true, meal: row, confidence: "high", question: null });
+  }
+
   if (!foodAiConfigured()) {
     return NextResponse.json({ error: "ANTHROPIC_API_KEY not configured" }, { status: 500 });
   }
@@ -102,16 +128,43 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true, meal: row, confidence: estimate.confidence, question: estimate.question });
 }
 
-// Revise an existing meal with extra detail (answering the estimator's
-// follow-up question) — re-estimates and updates in place, no duplicate row.
+// Revise an existing meal: either with extra detail (AI re-estimate — the
+// follow-up-question flow) or with per-item gram corrections (pure linear
+// rescale, no AI — the portion-editing flow).
 export async function PATCH(req: NextRequest) {
   if (!(await isAuthenticated())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const body = (await req.json().catch(() => null)) as { id?: number; detail?: string } | null;
+  const body = (await req.json().catch(() => null)) as { id?: number; detail?: string; grams?: number[] } | null;
   const id = Number(body?.id);
   const detail = (body?.detail ?? "").trim().slice(0, 300);
-  if (!Number.isInteger(id) || !detail) return NextResponse.json({ error: "id and detail required" }, { status: 400 });
+  if (!Number.isInteger(id) || (!detail && !Array.isArray(body?.grams))) {
+    return NextResponse.json({ error: "id plus detail or grams required" }, { status: 400 });
+  }
   const meal = db.select().from(schema.meals).where(eq(schema.meals.id, id)).get();
   if (!meal) return NextResponse.json({ error: "not found" }, { status: 404 });
+
+  if (Array.isArray(body?.grams)) {
+    const items = JSON.parse(meal.itemsJson ?? "[]") as { food: string; grams: number; kcal: number; protein: number | null }[];
+    if (items.length === 0 || body.grams.length !== items.length) {
+      return NextResponse.json({ error: "grams length must match items" }, { status: 400 });
+    }
+    const scaled = items.map((it, i) => {
+      const g = Number(body.grams![i]);
+      if (!Number.isFinite(g) || g <= 0 || it.grams <= 0) return it;
+      const f = g / it.grams;
+      return { ...it, grams: g, kcal: it.kcal * f, protein: it.protein != null ? it.protein * f : null };
+    });
+    const row = db
+      .update(schema.meals)
+      .set({
+        calories: Math.round(scaled.reduce((s, i) => s + i.kcal, 0)),
+        protein: Math.round(scaled.reduce((s, i) => s + (i.protein ?? 0), 0)) || meal.protein,
+        itemsJson: JSON.stringify(scaled),
+      })
+      .where(eq(schema.meals.id, id))
+      .returning()
+      .get();
+    return NextResponse.json({ ok: true, meal: row });
+  }
 
   const earlier = db
     .select()

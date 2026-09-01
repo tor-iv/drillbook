@@ -25,6 +25,8 @@ Work in this order:
 3. Give each item calories and protein for that gram amount. Sautéed or fried items: include 10-20% extra for cooking oil. Restaurant food runs fattier than home cooking. Nuts, seeds, oils, nut butters, and cheese are calorie-dense even in small volumes.
 4. Sum the items for the totals. The totals MUST equal the sum of the items.
 
+If the photo shows a nutrition label or packaged food, READ the label: use its per-serving values times the number of servings actually eaten (stated in the caption or visible). Label numbers beat estimation — one item per package, confidence high.
+
 If earlier meals from today are provided, they are context only — estimate ONLY the current meal.
 
 Reply with ONLY a JSON object, no prose, no code fences:

@@ -4,7 +4,7 @@ import { z } from "zod";
 import { db, schema } from "@/db";
 import { askClaudeJson } from "@/lib/claude";
 import { athleteProfile, COACH_PERSONA, coachModel } from "@/lib/coach";
-import { localDate } from "@/lib/dates";
+import { addDays, localDate } from "@/lib/dates";
 import { getDayEnergy, getDayMetrics } from "@/lib/energy";
 import { createEvent, googleConnected } from "@/lib/google";
 import { estimateMeal, foodModel } from "@/lib/foodai";
@@ -19,7 +19,7 @@ import { parseWorkouts, workoutModel } from "@/lib/workoutai";
 
 const ROUTER_SYSTEM = `${COACH_PERSONA} You're chatting with your athlete on Telegram. You know his profile and today's live numbers (provided as JSON, including today's date). Default reply: 1-3 sentences. Go longer only when he asks for a plan or a breakdown.
 
-If his message asks to LOG something, include it in "actions" (and confirm naturally in the reply): counters (pullups/pushups/squats/abs/pages use activityKey with a positive or negative delta), weight in lb, meals (pass his food description through verbatim), workouts (pass his description verbatim). If he asks to PUT SOMETHING ON HIS CALENDAR, add a calendar action: date as YYYY-MM-DD (resolve "tomorrow"/"Friday" from today's date), startTime/endTime as 24h HH:MM local, omit times for all-day. He also keeps a TO-DO LIST here (open items are in the JSON): "add X to my list / remind me to X" → todo_add (due date optional); "done with X / did X / check off X" → todo_done with enough of the item's text to match it; asking what's on his list → answer from openTodos. If he's adding detail or a correction to the meal he JUST logged ("it had two scoops of rice", "cooked in butter", "actually it was a large") → meal_revise with that detail, not a new meal. Multiple actions allowed. Questions about progress, training, food, or anything else: just answer from the data — never invent numbers.
+If his message asks to LOG something, include it in "actions" (and confirm naturally in the reply): counters (pullups/pushups/squats/abs/pages use activityKey with a positive or negative delta), weight in lb, meals (pass his food description through verbatim), workouts (pass his description verbatim). If he asks to PUT SOMETHING ON HIS CALENDAR, add a calendar action: date as YYYY-MM-DD (resolve "tomorrow"/"Friday" from today's date), startTime/endTime as 24h HH:MM local, omit times for all-day. He also keeps a TO-DO LIST here (open items are in the JSON): "add X to my list / remind me to X" → todo_add (due date optional); "done with X / did X / check off X" → todo_done with enough of the item's text to match it; asking what's on his list → answer from openTodos. If he's adding detail or a correction to the meal he JUST logged ("it had two scoops of rice", "cooked in butter", "actually it was a large") → meal_revise with that detail, not a new meal. "Same lunch as yesterday" / "my usual breakfast" → find the matching entry in recentMeals and log a meal action with that exact name as the description. Multiple actions allowed. Questions about progress, training, food, or anything else: just answer from the data — never invent numbers.
 
 Workout advice covers TODAY only — exact sets/reps/distances for today's session. The Sunday weekly plan owns the week; don't sketch multi-day plans unless he explicitly asks for one. Meal suggestions only when he asks — don't volunteer food advice, but when asked, give real meals with rough calorie/protein numbers. Never vague advice or motivational filler.
 
@@ -59,6 +59,26 @@ function earlierMeals(date: string): { name: string; calories: number }[] {
     .where(eq(schema.meals.date, date))
     .all()
     .map((m) => ({ name: m.name, calories: m.calories }));
+}
+
+// Deduped meal names from the last 14 days so "my usual breakfast" resolves.
+function recentMealNames(today: string): { name: string; calories: number; date: string }[] {
+  const rows = db
+    .select()
+    .from(schema.meals)
+    .where(sql`${schema.meals.date} >= ${addDays(today, -14)} AND ${schema.meals.date} < ${today}`)
+    .orderBy(sql`${schema.meals.id} DESC`)
+    .all();
+  const seen = new Set<string>();
+  const out: { name: string; calories: number; date: string }[] = [];
+  for (const m of rows) {
+    const key = m.name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ name: m.name, calories: Math.round(m.calories), date: m.date });
+    if (out.length >= 12) break;
+  }
+  return out;
 }
 
 async function runAction(a: Action): Promise<string> {
@@ -322,6 +342,7 @@ export async function POST(req: NextRequest) {
               }
             : undefined,
           openTodos,
+          recentMeals: recentMealNames(status.date),
           message: msg.text,
         }),
       }),
