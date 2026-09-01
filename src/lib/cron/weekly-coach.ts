@@ -3,6 +3,7 @@ import { athleteProfile, coachConfigured, coachModel, coachSay, WEEKLY_COACH_SYS
 import { sendCoachEmail } from "@/lib/email";
 import { sendOwnerTelegram } from "@/lib/telegram";
 import { localDate } from "@/lib/dates";
+import { and, gte, lte } from "drizzle-orm";
 import { getRangeBalances, goalWeightLb } from "@/lib/energy";
 import { getWeekStatus } from "@/lib/status";
 import { alreadyRanToday, markRan } from "./guard";
@@ -21,10 +22,30 @@ export async function runWeeklyCoach(force = false): Promise<string> {
   let model = "template";
   if (coachConfigured()) {
     try {
+      const rows = db
+        .select()
+        .from(schema.dayMetrics)
+        .where(and(gte(schema.dayMetrics.date, week.from), lte(schema.dayMetrics.date, week.to)))
+        .all();
+      const avg = (vals: (number | null)[]) => {
+        const nums = vals.filter((v): v is number => v != null);
+        return nums.length ? Math.round((nums.reduce((s, v) => s + v, 0) / nums.length) * 10) / 10 : undefined;
+      };
       content = await coachSay(WEEKLY_COACH_SYSTEM, {
         athlete: athleteProfile(),
         goalWeightLb: goalWeightLb(),
         dailyEnergyBalances: getRangeBalances(week.from, week.to),
+        appleHealthWeek: rows.length
+          ? {
+              daysSynced: rows.length,
+              avgSleepHours: avg(rows.map((r) => r.sleepHours)),
+              avgSteps: avg(rows.map((r) => r.steps)),
+              avgRestingHr: avg(rows.map((r) => r.restingHr)),
+              avgMeasuredBurn: avg(
+                rows.map((r) => (r.activeEnergy != null && r.basalEnergy != null ? r.activeEnergy + r.basalEnergy : null)),
+              ),
+            }
+          : undefined,
         ...week,
       });
       model = coachModel();

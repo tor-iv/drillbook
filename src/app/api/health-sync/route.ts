@@ -154,6 +154,56 @@ function haeToDays(payload: z.infer<typeof haeSchema>): z.infer<typeof daySchema
   return [...days.values()];
 }
 
+type DayMetricAgg = Partial<Record<"activeEnergy" | "basalEnergy" | "steps" | "exerciseMin" | "distanceMi" | "sleepHours" | "restingHr" | "hrv" | "vo2Max", number>>;
+
+// column → [name matcher, aggregation]. AVG entries accumulate {sum, n}.
+const METRIC_RULES: [keyof DayMetricAgg, RegExp, "sum" | "avg" | "last"][] = [
+  ["activeEnergy", /^active_energy$/, "sum"],
+  ["basalEnergy", /^basal_energy/, "sum"],
+  ["steps", /^step_count$/, "sum"],
+  ["exerciseMin", /^apple_exercise_time$/, "sum"],
+  ["distanceMi", /^walking_running_distance$/, "sum"],
+  ["sleepHours", /^sleep_analysis$/, "sum"],
+  ["restingHr", /^resting_heart_rate$/, "avg"],
+  ["hrv", /^heart_rate_variability$/, "avg"],
+  ["vo2Max", /^vo2_?max$/i, "last"],
+];
+
+function haeDayMetrics(payload: z.infer<typeof haeSchema>): Map<string, DayMetricAgg> {
+  const days = new Map<string, DayMetricAgg>();
+  const counts = new Map<string, number>(); // `${date}:${key}` → n, for avg
+
+  for (const metric of payload.data.metrics ?? []) {
+    const rule = METRIC_RULES.find(([, re]) => re.test(metric.name));
+    if (!rule) continue;
+    const [key, , agg] = rule;
+    const kj = /kj/i.test(metric.units ?? "");
+    for (const point of metric.data) {
+      if (typeof point.date !== "string") continue;
+      const date = point.date.slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+      // sleep_analysis points often carry hours in `asleep` instead of `qty`.
+      let qty = typeof point.qty === "number" ? point.qty : undefined;
+      if (key === "sleepHours" && typeof point.asleep === "number") qty = point.asleep;
+      if (qty == null) continue;
+      if (kj) qty /= 4.184;
+      if (key === "distanceMi") qty = toMi(qty, metric.units) ?? 0;
+
+      const day = days.get(date) ?? {};
+      if (agg === "sum") day[key] = (day[key] ?? 0) + qty;
+      else if (agg === "last") day[key] = qty;
+      else {
+        const ck = `${date}:${key}`;
+        const n = (counts.get(ck) ?? 0) + 1;
+        counts.set(ck, n);
+        day[key] = ((day[key] ?? 0) * (n - 1) + qty) / n;
+      }
+      days.set(date, day);
+    }
+  }
+  return days;
+}
+
 function upsertDay(day: z.infer<typeof daySchema>): { workouts: number; weight: boolean } {
   let wroteWeight = false;
   if (day.bodyWeightLb != null) {
@@ -210,7 +260,9 @@ export async function POST(req: NextRequest) {
   }
 
   let payload = parsed.data;
+  let metricDays: Map<string, DayMetricAgg> | null = null;
   if ("data" in payload) {
+    metricDays = haeDayMetrics(payload);
     const days = haeToDays(payload);
     payload = { days };
   } else if ("dump" in payload) {
@@ -240,7 +292,23 @@ export async function POST(req: NextRequest) {
       workoutCount += r.workouts;
       if (r.weight) weightCount++;
     }
+    for (const [date, m] of metricDays ?? []) {
+      db.insert(schema.dayMetrics)
+        .values({ date, ...m })
+        .onConflictDoUpdate({
+          target: schema.dayMetrics.date,
+          // Only overwrite columns this push actually carried.
+          set: { ...m, updatedAt: sql`(datetime('now'))` },
+        })
+        .run();
+    }
   });
 
-  return NextResponse.json({ ok: true, days: days.length, workouts: workoutCount, weightDays: weightCount });
+  return NextResponse.json({
+    ok: true,
+    days: days.length,
+    workouts: workoutCount,
+    weightDays: weightCount,
+    metricDays: metricDays?.size ?? 0,
+  });
 }

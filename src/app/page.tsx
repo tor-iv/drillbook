@@ -5,7 +5,7 @@ import { getTodayStatus } from "@/lib/status";
 import { CounterCard, MeasureCard } from "@/components/activity-cards";
 import { CoachNote } from "@/components/coach-note";
 import { WorkoutLog } from "@/components/workout-log";
-import { getDayEnergy } from "@/lib/energy";
+import { getDayEnergy, getDayMetrics } from "@/lib/energy";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +26,13 @@ export default function Dashboard() {
     .all();
 
   const energy = getDayEnergy(today);
+  const metrics = getDayMetrics(today);
+  const fmtSleep = (h: number) => `${Math.floor(h)}:${String(Math.round((h % 1) * 60)).padStart(2, "0")}`;
+  const engine: { label: string; value: string }[] = [];
+  if (metrics?.steps != null) engine.push({ label: "steps", value: Math.round(metrics.steps).toLocaleString() });
+  if (energy.burned != null)
+    engine.push({ label: energy.burnSource === "measured" ? "burned" : "burned (est)", value: String(energy.burned) });
+  if (metrics?.sleepHours != null) engine.push({ label: "sleep", value: fmtSleep(metrics.sleepHours) });
   const dateLabel = new Date(`${today}T12:00:00`).toLocaleDateString("en-US", {
     weekday: "long",
     month: "short",
@@ -43,6 +50,17 @@ export default function Dashboard() {
       </header>
 
       {nudge && <CoachNote content={nudge.content} />}
+
+      {engine.length > 0 && (
+        <div className="marker-box mb-5 flex justify-between p-3">
+          {engine.map((e) => (
+            <div key={e.label} className="text-center">
+              <div className="font-display text-xl leading-none">{e.value}</div>
+              <div className="mt-1 text-xs text-pencil">{e.label}</div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {status.calories != null && (
         <a href="/food" className="marker-box mb-5 flex items-baseline justify-between p-3">

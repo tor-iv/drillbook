@@ -1,11 +1,11 @@
-import { eq, sql } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db, schema } from "@/db";
 import { askClaudeJson } from "@/lib/claude";
 import { athleteProfile, COACH_PERSONA, coachModel } from "@/lib/coach";
 import { localDate } from "@/lib/dates";
-import { getDayEnergy } from "@/lib/energy";
+import { getDayEnergy, getDayMetrics } from "@/lib/energy";
 import { createEvent, googleConnected } from "@/lib/google";
 import { estimateMeal, foodModel } from "@/lib/foodai";
 import { pinMatches } from "@/lib/auth";
@@ -19,11 +19,11 @@ import { parseWorkouts, workoutModel } from "@/lib/workoutai";
 
 const ROUTER_SYSTEM = `${COACH_PERSONA} You're chatting with your athlete on Telegram. You know his profile and today's live numbers (provided as JSON, including today's date). Default reply: 1-3 sentences. Go longer only when he asks for a plan or a breakdown.
 
-If his message asks to LOG something, include it in "actions" (and confirm naturally in the reply): counters (pullups/pushups/squats/abs/pages use activityKey with a positive or negative delta), weight in lb, meals (pass his food description through verbatim), workouts (pass his description verbatim). If he asks to PUT SOMETHING ON HIS CALENDAR, add a calendar action: date as YYYY-MM-DD (resolve "tomorrow"/"Friday" from today's date), startTime/endTime as 24h HH:MM local, omit times for all-day. He also keeps a TO-DO LIST here (open items are in the JSON): "add X to my list / remind me to X" → todo_add (due date optional); "done with X / did X / check off X" → todo_done with enough of the item's text to match it; asking what's on his list → answer from openTodos. Multiple actions allowed. Questions about progress, training, food, or anything else: just answer from the data — never invent numbers.
+If his message asks to LOG something, include it in "actions" (and confirm naturally in the reply): counters (pullups/pushups/squats/abs/pages use activityKey with a positive or negative delta), weight in lb, meals (pass his food description through verbatim), workouts (pass his description verbatim). If he asks to PUT SOMETHING ON HIS CALENDAR, add a calendar action: date as YYYY-MM-DD (resolve "tomorrow"/"Friday" from today's date), startTime/endTime as 24h HH:MM local, omit times for all-day. He also keeps a TO-DO LIST here (open items are in the JSON): "add X to my list / remind me to X" → todo_add (due date optional); "done with X / did X / check off X" → todo_done with enough of the item's text to match it; asking what's on his list → answer from openTodos. If he's adding detail or a correction to the meal he JUST logged ("it had two scoops of rice", "cooked in butter", "actually it was a large") → meal_revise with that detail, not a new meal. Multiple actions allowed. Questions about progress, training, food, or anything else: just answer from the data — never invent numbers.
 
 Workout advice covers TODAY only — exact sets/reps/distances for today's session. The Sunday weekly plan owns the week; don't sketch multi-day plans unless he explicitly asks for one. Meal suggestions only when he asks — don't volunteer food advice, but when asked, give real meals with rough calorie/protein numbers. Never vague advice or motivational filler.
 
-Return ONLY JSON: {"reply": "<message>", "actions": [{"type":"counter","activityKey":"pushups","delta":20} | {"type":"weight","value":199.5} | {"type":"meal","description":"..."} | {"type":"workout","description":"..."} | {"type":"calendar","title":"Climbing","date":"2026-09-02","startTime":"18:00","endTime":"19:30"} | {"type":"todo_add","text":"...","due":"2026-09-05"} | {"type":"todo_done","match":"..."}]}. "actions" may be empty.`;
+Return ONLY JSON: {"reply": "<message>", "actions": [{"type":"counter","activityKey":"pushups","delta":20} | {"type":"weight","value":199.5} | {"type":"meal","description":"..."} | {"type":"workout","description":"..."} | {"type":"calendar","title":"Climbing","date":"2026-09-02","startTime":"18:00","endTime":"19:30"} | {"type":"todo_add","text":"...","due":"2026-09-05"} | {"type":"todo_done","match":"..."} | {"type":"meal_revise","detail":"..."}]}. "actions" may be empty.`;
 
 const actionSchema = z.union([
   z.object({ type: z.literal("counter"), activityKey: z.string(), delta: z.number() }),
@@ -43,6 +43,7 @@ const actionSchema = z.union([
     due: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullish(),
   }),
   z.object({ type: z.literal("todo_done"), match: z.string().min(1) }),
+  z.object({ type: z.literal("meal_revise"), detail: z.string().min(1) }),
 ]);
 const routerSchema = z.object({
   reply: z.string().min(1),
@@ -50,6 +51,15 @@ const routerSchema = z.object({
 });
 
 type Action = z.infer<typeof actionSchema>;
+
+function earlierMeals(date: string): { name: string; calories: number }[] {
+  return db
+    .select()
+    .from(schema.meals)
+    .where(eq(schema.meals.date, date))
+    .all()
+    .map((m) => ({ name: m.name, calories: m.calories }));
+}
 
 async function runAction(a: Action): Promise<string> {
   const date = localDate();
@@ -105,7 +115,7 @@ async function runAction(a: Action): Promise<string> {
       : "(calendar write failed)";
   }
   if (a.type === "meal") {
-    const est = await estimateMeal({ description: a.description });
+    const est = await estimateMeal({ description: a.description, earlierMealsToday: earlierMeals(date) });
     db.insert(schema.meals)
       .values({
         date,
@@ -115,9 +125,34 @@ async function runAction(a: Action): Promise<string> {
         protein: est.protein,
         method: "text",
         model: foodModel(),
+        itemsJson: est.items.length ? JSON.stringify(est.items) : null,
       })
       .run();
-    return `✓ ${est.name} ~${Math.round(est.calories)} cal`;
+    return `✓ ${est.name} ~${Math.round(est.calories)} cal${est.question ? `\n${est.question}` : ""}`;
+  }
+  if (a.type === "meal_revise") {
+    const last = db
+      .select()
+      .from(schema.meals)
+      .where(eq(schema.meals.date, date))
+      .orderBy(desc(schema.meals.id))
+      .limit(1)
+      .get();
+    if (!last) return "(no meal today to revise)";
+    const est = await estimateMeal({
+      description: `${last.description ?? last.name}. Additional detail: ${a.detail}`,
+      earlierMealsToday: earlierMeals(date).filter((m) => m.name !== last.name),
+    });
+    db.update(schema.meals)
+      .set({
+        name: est.name,
+        calories: est.calories,
+        protein: est.protein,
+        itemsJson: est.items.length ? JSON.stringify(est.items) : null,
+      })
+      .where(eq(schema.meals.id, last.id))
+      .run();
+    return `✓ Revised: ${est.name} ~${Math.round(est.calories)} cal`;
   }
   const res = await parseWorkouts({ description: a.description });
   const now = Date.now();
@@ -171,6 +206,7 @@ async function handlePhoto(fileId: string, caption: string): Promise<string> {
     description: caption,
     imageBase64: photo.base64,
     imageMediaType: photo.mediaType,
+    earlierMealsToday: earlierMeals(date),
   });
   db.insert(schema.meals)
     .values({
@@ -181,12 +217,13 @@ async function handlePhoto(fileId: string, caption: string): Promise<string> {
       protein: est.protein,
       method: "photo",
       model: foodModel(),
+      itemsJson: est.items.length ? JSON.stringify(est.items) : null,
     })
     .run();
   const total = Math.round(
     db.select().from(schema.meals).where(eq(schema.meals.date, date)).all().reduce((s, m) => s + m.calories, 0),
   );
-  return `Logged ${est.name} — about ${Math.round(est.calories)} cal${est.protein ? `, ${Math.round(est.protein)}g protein` : ""}. ${total} cal today.${est.confidence === "low" ? " (rough guess — a few words next time tightens it)" : ""}`;
+  return `Logged ${est.name} — about ${Math.round(est.calories)} cal${est.protein ? `, ${Math.round(est.protein)}g protein` : ""}. ${total} cal today.${est.question ? `\n${est.question}` : ""}`;
 }
 
 export async function POST(req: NextRequest) {
@@ -233,6 +270,7 @@ export async function POST(req: NextRequest) {
 
     const status = getTodayStatus();
     const energy = getDayEnergy(status.date);
+    const metrics = getDayMetrics(status.date);
     const openTodos = db
       .select()
       .from(schema.todos)
@@ -247,6 +285,15 @@ export async function POST(req: NextRequest) {
           athlete: athleteProfile(),
           today: status,
           energy,
+          appleHealth: metrics
+            ? {
+                steps: metrics.steps != null ? Math.round(metrics.steps) : undefined,
+                exerciseMin: metrics.exerciseMin != null ? Math.round(metrics.exerciseMin) : undefined,
+                sleepHoursLastNight: metrics.sleepHours ?? undefined,
+                restingHr: metrics.restingHr != null ? Math.round(metrics.restingHr) : undefined,
+                vo2Max: metrics.vo2Max ?? undefined,
+              }
+            : undefined,
           openTodos,
           message: msg.text,
         }),

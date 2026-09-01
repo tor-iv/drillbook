@@ -58,9 +58,16 @@ export async function POST(req: NextRequest) {
     imageMediaType = photo.type;
   }
 
+  const earlier = db
+    .select()
+    .from(schema.meals)
+    .where(eq(schema.meals.date, date))
+    .all()
+    .map((m) => ({ name: m.name, calories: m.calories }));
+
   let estimate;
   try {
-    estimate = await estimateMeal({ description, imageBase64, imageMediaType });
+    estimate = await estimateMeal({ description, imageBase64, imageMediaType, earlierMealsToday: earlier });
   } catch (e) {
     console.error("[meals] estimate failed:", e);
     return NextResponse.json({ error: "couldn't estimate that — try adding a short description" }, { status: 502 });
@@ -86,12 +93,13 @@ export async function POST(req: NextRequest) {
       method: hasPhoto ? "photo" : "text",
       photoPath,
       model: foodModel(),
+      itemsJson: estimate.items.length ? JSON.stringify(estimate.items) : null,
     })
     .returning()
     .get();
 
-  // confidence is advisory UI feedback for this one response, not stored.
-  return NextResponse.json({ ok: true, meal: row, confidence: estimate.confidence });
+  // confidence/question are advisory UI feedback for this one response, not stored.
+  return NextResponse.json({ ok: true, meal: row, confidence: estimate.confidence, question: estimate.question });
 }
 
 export async function DELETE(req: NextRequest) {

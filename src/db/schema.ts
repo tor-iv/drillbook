@@ -70,6 +70,8 @@ export const meals = sqliteTable("meals", {
   method: text("method", { enum: ["photo", "text"] }).notNull(),
   photoPath: text("photo_path"), // under UPLOAD_DIR/meals, null for text entries
   model: text("model").notNull(),
+  // Itemized breakdown from the estimator: [{food, grams, kcal, protein, source}]
+  itemsJson: text("items_json"),
   createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
 });
 
@@ -80,6 +82,22 @@ export const aiNudges = sqliteTable("ai_nudges", {
   content: text("content").notNull(),
   model: text("model").notNull(),
   createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+});
+
+// One row per day of Apple Health daily aggregates (Health Auto Export push).
+// All measures nullable — a day may sync only some metrics.
+export const dayMetrics = sqliteTable("day_metrics", {
+  date: text("date").primaryKey(),
+  activeEnergy: real("active_energy"),
+  basalEnergy: real("basal_energy"),
+  steps: real("steps"),
+  exerciseMin: real("exercise_min"),
+  distanceMi: real("distance_mi"),
+  sleepHours: real("sleep_hours"),
+  restingHr: real("resting_hr"),
+  hrv: real("hrv"),
+  vo2Max: real("vo2_max"),
+  updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
 });
 
 // Personal to-do list, managed conversationally through the Telegram bot

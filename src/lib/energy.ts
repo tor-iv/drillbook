@@ -49,10 +49,18 @@ function workoutBurn(w: { type: string; durationMin: number | null; calories: nu
   return (MET[w.type] ?? 5) * (weightLb / LB_PER_KG) * (w.durationMin / 60);
 }
 
+export type DayMetricsRow = typeof schema.dayMetrics.$inferSelect;
+
+/** Apple Health daily aggregates (HAE push), null if none synced for the date. */
+export function getDayMetrics(date: string): DayMetricsRow | null {
+  return db.select().from(schema.dayMetrics).where(eq(schema.dayMetrics.date, date)).get() ?? null;
+}
+
 export type DayEnergy = {
   weightLb: number | null;
   goalWeightLb: number;
-  burned: number | null; // baseline + workouts; null when no weight ever logged
+  burned: number | null; // measured (Apple) or estimated; null when neither possible
+  burnSource: "measured" | "estimate" | null;
   eaten: number | null; // null when no meals logged that day
   balance: number | null; // eaten - burned; needs both
   deficitTarget: number;
@@ -61,10 +69,19 @@ export type DayEnergy = {
 export function getDayEnergy(date: string): DayEnergy {
   const weightLb = latestWeightLb(date);
 
+  // Apple's measured total (active + basal) wins over the formula estimate.
+  // Never add workout burns on top of it — watch workouts are already inside
+  // active_energy (double-count trap).
+  const metrics = getDayMetrics(date);
   let burned: number | null = null;
-  if (weightLb != null) {
+  let burnSource: DayEnergy["burnSource"] = null;
+  if (metrics?.activeEnergy != null && metrics.basalEnergy != null) {
+    burned = Math.round(metrics.activeEnergy + metrics.basalEnergy);
+    burnSource = "measured";
+  } else if (weightLb != null) {
     const workouts = db.select().from(schema.workouts).where(eq(schema.workouts.date, date)).all();
     burned = Math.round(baselineBurn(weightLb) + workouts.reduce((s, w) => s + workoutBurn(w, weightLb), 0));
+    burnSource = "estimate";
   }
 
   const meals = db.select().from(schema.meals).where(eq(schema.meals.date, date)).all();
@@ -74,6 +91,7 @@ export function getDayEnergy(date: string): DayEnergy {
     weightLb,
     goalWeightLb: GOAL_WEIGHT_LB,
     burned,
+    burnSource,
     eaten,
     balance: eaten != null && burned != null ? eaten - burned : null,
     deficitTarget: DAILY_DEFICIT_TARGET,

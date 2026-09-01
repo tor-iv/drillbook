@@ -54,6 +54,24 @@ export default async function TrendsPage({
           .all()
       : [];
 
+  const metricRows = db
+    .select()
+    .from(schema.dayMetrics)
+    .where(and(gte(schema.dayMetrics.date, from), lte(schema.dayMetrics.date, today)))
+    .all();
+  const metricMap = new Map(metricRows.map((r) => [r.date, r]));
+  const metricCharts: { key: string; label: string; unit: string; kind: "counter" | "measure"; get: (r: (typeof metricRows)[number]) => number | null }[] = [
+    { key: "steps", label: "Steps", unit: "steps", kind: "counter", get: (r) => (r.steps != null ? Math.round(r.steps) : null) },
+    { key: "sleep", label: "Sleep", unit: "h", kind: "measure", get: (r) => (r.sleepHours != null ? Math.round(r.sleepHours * 10) / 10 : null) },
+    {
+      key: "burn",
+      label: "Burned (measured)",
+      unit: "cal",
+      kind: "measure",
+      get: (r) => (r.activeEnergy != null && r.basalEnergy != null ? Math.round(r.activeEnergy + r.basalEnergy) : null),
+    },
+  ];
+
   return (
     <main>
       <header className="mb-4 flex items-baseline justify-between">
@@ -109,6 +127,20 @@ export default async function TrendsPage({
                   </tbody>
                 </table>
               </details>
+            </section>
+          );
+        })}
+
+        {metricCharts.map((mc) => {
+          const points: DayPoint[] = dates.map((d) => {
+            const r = metricMap.get(d);
+            return { date: d, value: r ? mc.get(r) : null };
+          });
+          if (!points.some((p) => p.value != null)) return null;
+          return (
+            <section key={mc.key} className="marker-box p-4">
+              <h2 className="font-display mb-1 text-2xl leading-none">{mc.label}</h2>
+              <DayChart points={points} goal={null} unit={mc.unit} kind={mc.kind} />
             </section>
           );
         })}

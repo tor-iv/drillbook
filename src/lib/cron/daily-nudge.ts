@@ -5,7 +5,7 @@ import { addDays } from "@/lib/dates";
 import { sendCoachEmail } from "@/lib/email";
 import { localDate } from "@/lib/dates";
 import { googleConnected, upsertDailyEvent } from "@/lib/google";
-import { getDayEnergy } from "@/lib/energy";
+import { getDayEnergy, getDayMetrics } from "@/lib/energy";
 import { sendNudgeSms } from "@/lib/sms";
 import { sendOwnerTelegram } from "@/lib/telegram";
 import { getTodayStatus } from "@/lib/status";
@@ -17,6 +17,7 @@ export async function runDailyNudge(force = false, slot: NudgeSlot = "evening"):
 
   const status = getTodayStatus(today);
   const energy = getDayEnergy(today);
+  const metrics = getDayMetrics(today);
 
   // The nudge must go out even when the LLM is down or unconfigured —
   // fall back to a template rather than losing the day's email.
@@ -44,9 +45,14 @@ export async function runDailyNudge(force = false, slot: NudgeSlot = "evening"):
         bodyWeightLb: energy.weightLb ?? undefined,
         goalWeightLb: energy.goalWeightLb,
         caloriesEatenToday: energy.eaten ?? undefined,
-        estCaloriesBurnedToday: energy.burned ?? undefined,
+        caloriesBurnedToday: energy.burned ?? undefined,
+        burnSource: energy.burnSource ?? undefined,
         energyBalance: energy.balance ?? undefined,
         dailyDeficitTarget: energy.deficitTarget,
+        stepsToday: metrics?.steps != null ? Math.round(metrics.steps) : undefined,
+        exerciseMinToday: metrics?.exerciseMin != null ? Math.round(metrics.exerciseMin) : undefined,
+        sleepHoursLastNight: metrics?.sleepHours ?? undefined,
+        restingHr: metrics?.restingHr != null ? Math.round(metrics.restingHr) : undefined,
       });
       model = coachModel();
     } catch (e) {

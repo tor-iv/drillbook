@@ -64,6 +64,7 @@ export async function POST(req: NextRequest) {
           protein: est.protein,
           method: "text",
           model: foodModel(),
+          itemsJson: est.items.length ? JSON.stringify(est.items) : null,
         })
         .run();
       const total = Math.round(
