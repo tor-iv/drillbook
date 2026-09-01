@@ -33,7 +33,9 @@ const haeSchema = z.object({
         z.object({
           name: z.string(),
           units: z.string().optional(),
-          data: z.array(z.object({ date: z.string(), qty: z.number() }).passthrough()).default([]),
+          // Point shape varies wildly by metric (sleep has no qty, HR has
+          // min/avg/max) — accept anything, filter in the converter.
+          data: z.array(z.record(z.string(), z.unknown())).default([]),
         }).passthrough(),
       )
       .optional(),
@@ -128,6 +130,7 @@ function haeToDays(payload: z.infer<typeof haeSchema>): z.infer<typeof daySchema
   for (const metric of payload.data.metrics ?? []) {
     if (!/body_?mass|^weight/i.test(metric.name) || /lean|index/i.test(metric.name)) continue;
     for (const point of metric.data) {
+      if (typeof point.date !== "string" || typeof point.qty !== "number") continue;
       const date = point.date.slice(0, 10);
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
       dayFor(date).bodyWeightLb = toLb(point.qty, metric.units);
@@ -201,7 +204,10 @@ export async function POST(req: NextRequest) {
   if (!hasShortcutToken(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.message }, { status: 400 });
+  if (!parsed.success) {
+    console.warn("[health-sync] rejected payload:", parsed.error.message.slice(0, 500));
+    return NextResponse.json({ error: parsed.error.message }, { status: 400 });
+  }
 
   let payload = parsed.data;
   if ("data" in payload) {
