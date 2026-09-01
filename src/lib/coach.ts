@@ -28,7 +28,7 @@ export type NudgeSlot = "morning" | "midday" | "evening";
 
 const SLOT_FLAVOR: Record<NudgeSlot, string> = {
   morning:
-    "It's MORNING. Brief him for the day ahead: today's targets, one concrete focus, and a one-line verdict on yesterday (from yesterdaySummary if provided). Energizing, forward-looking — today's counts will mostly be zero and that's expected, don't scold.",
+    "It's MORNING. Brief him for the day ahead: today's targets, one concrete focus, and a one-line verdict on yesterday (from yesterdaySummary if provided). If openTodos are present, work the most urgent one or two into the brief (due dates matter). Energizing, forward-looking — today's counts will mostly be zero and that's expected, don't scold.",
   midday:
     "It's MIDDAY. This is a checkpoint: where he stands against each goal at this hour, and what to fit into the afternoon. Matter-of-fact pacing talk, no panic.",
   evening:

@@ -22,6 +22,13 @@
       "when": 1787857688148,
       "tag": "0002_smooth_cargill",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1788276296250,
+      "tag": "0003_magenta_spiral",
+      "breakpoints": true
     }
   ]
 }

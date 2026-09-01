@@ -19,11 +19,11 @@ import { parseWorkouts, workoutModel } from "@/lib/workoutai";
 
 const ROUTER_SYSTEM = `${COACH_PERSONA} You're chatting with your athlete on Telegram. You know his profile and today's live numbers (provided as JSON, including today's date). Default reply: 1-3 sentences. Go longer only when he asks for a plan or a breakdown.
 
-If his message asks to LOG something, include it in "actions" (and confirm naturally in the reply): counters (pullups/pushups/squats/abs/pages use activityKey with a positive or negative delta), weight in lb, meals (pass his food description through verbatim), workouts (pass his description verbatim). If he asks to PUT SOMETHING ON HIS CALENDAR, add a calendar action: date as YYYY-MM-DD (resolve "tomorrow"/"Friday" from today's date), startTime/endTime as 24h HH:MM local, omit times for all-day. Multiple actions allowed. Questions about progress, training, food, or anything else: just answer from the data — never invent numbers.
+If his message asks to LOG something, include it in "actions" (and confirm naturally in the reply): counters (pullups/pushups/squats/abs/pages use activityKey with a positive or negative delta), weight in lb, meals (pass his food description through verbatim), workouts (pass his description verbatim). If he asks to PUT SOMETHING ON HIS CALENDAR, add a calendar action: date as YYYY-MM-DD (resolve "tomorrow"/"Friday" from today's date), startTime/endTime as 24h HH:MM local, omit times for all-day. He also keeps a TO-DO LIST here (open items are in the JSON): "add X to my list / remind me to X" → todo_add (due date optional); "done with X / did X / check off X" → todo_done with enough of the item's text to match it; asking what's on his list → answer from openTodos. Multiple actions allowed. Questions about progress, training, food, or anything else: just answer from the data — never invent numbers.
 
 Workout advice covers TODAY only — exact sets/reps/distances for today's session. The Sunday weekly plan owns the week; don't sketch multi-day plans unless he explicitly asks for one. Meal suggestions only when he asks — don't volunteer food advice, but when asked, give real meals with rough calorie/protein numbers. Never vague advice or motivational filler.
 
-Return ONLY JSON: {"reply": "<message>", "actions": [{"type":"counter","activityKey":"pushups","delta":20} | {"type":"weight","value":199.5} | {"type":"meal","description":"..."} | {"type":"workout","description":"..."} | {"type":"calendar","title":"Climbing","date":"2026-09-02","startTime":"18:00","endTime":"19:30"}]}. "actions" may be empty.`;
+Return ONLY JSON: {"reply": "<message>", "actions": [{"type":"counter","activityKey":"pushups","delta":20} | {"type":"weight","value":199.5} | {"type":"meal","description":"..."} | {"type":"workout","description":"..."} | {"type":"calendar","title":"Climbing","date":"2026-09-02","startTime":"18:00","endTime":"19:30"} | {"type":"todo_add","text":"...","due":"2026-09-05"} | {"type":"todo_done","match":"..."}]}. "actions" may be empty.`;
 
 const actionSchema = z.union([
   z.object({ type: z.literal("counter"), activityKey: z.string(), delta: z.number() }),
@@ -37,6 +37,12 @@ const actionSchema = z.union([
     startTime: z.string().regex(/^\d{2}:\d{2}$/).nullish(),
     endTime: z.string().regex(/^\d{2}:\d{2}$/).nullish(),
   }),
+  z.object({
+    type: z.literal("todo_add"),
+    text: z.string().min(1),
+    due: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullish(),
+  }),
+  z.object({ type: z.literal("todo_done"), match: z.string().min(1) }),
 ]);
 const routerSchema = z.object({
   reply: z.string().min(1),
@@ -68,6 +74,23 @@ async function runAction(a: Action): Promise<string> {
       .where(sql`${schema.entries.activityId} = ${activity.id} AND ${schema.entries.date} = ${date}`)
       .get();
     return `✓ ${activity.label}: ${row?.value ?? 0}${activity.dailyTarget ? `/${activity.dailyTarget}` : ""}`;
+  }
+  if (a.type === "todo_add") {
+    db.insert(schema.todos).values({ text: a.text, due: a.due ?? null }).run();
+    return `✓ On the list: ${a.text}${a.due ? ` (by ${a.due})` : ""}`;
+  }
+  if (a.type === "todo_done") {
+    const open = db.select().from(schema.todos).where(eq(schema.todos.done, 0)).all();
+    const needle = a.match.toLowerCase();
+    const hit =
+      open.find((t) => t.text.toLowerCase() === needle) ??
+      open.find((t) => t.text.toLowerCase().includes(needle) || needle.includes(t.text.toLowerCase()));
+    if (!hit) return `(nothing open matching "${a.match}")`;
+    db.update(schema.todos)
+      .set({ done: 1, completedAt: new Date().toISOString() })
+      .where(eq(schema.todos.id, hit.id))
+      .run();
+    return `✓ Done: ${hit.text}`;
   }
   if (a.type === "calendar") {
     if (!googleConnected()) return "(calendar not connected — hit Connect in Settings first)";
@@ -210,6 +233,12 @@ export async function POST(req: NextRequest) {
 
     const status = getTodayStatus();
     const energy = getDayEnergy(status.date);
+    const openTodos = db
+      .select()
+      .from(schema.todos)
+      .where(eq(schema.todos.done, 0))
+      .all()
+      .map((t) => ({ text: t.text, due: t.due ?? undefined }));
     const routed = routerSchema.parse(
       await askClaudeJson({
         model: coachModel(),
@@ -218,6 +247,7 @@ export async function POST(req: NextRequest) {
           athlete: athleteProfile(),
           today: status,
           energy,
+          openTodos,
           message: msg.text,
         }),
       }),

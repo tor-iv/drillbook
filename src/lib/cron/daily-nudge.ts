@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { athleteProfile, coachConfigured, coachModel, coachSay, dailyNudgeSystem, type NudgeSlot } from "@/lib/coach";
 import { addDays } from "@/lib/dates";
@@ -26,9 +27,16 @@ export async function runDailyNudge(force = false, slot: NudgeSlot = "evening"):
   let model = "template";
   if (coachConfigured()) {
     try {
+      const openTodos = db
+        .select()
+        .from(schema.todos)
+        .where(eq(schema.todos.done, 0))
+        .all()
+        .map((t) => ({ text: t.text, due: t.due ?? undefined }));
       content = await coachSay(dailyNudgeSystem(slot), {
         athlete: athleteProfile(),
         date: today,
+        openTodos: openTodos.length ? openTodos : undefined,
         yesterdaySummary: slot === "morning" ? getTodayStatus(addDays(today, -1)).summary : undefined,
         activities: status.activities
           .filter((a) => a.kind === "counter")

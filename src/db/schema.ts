@@ -82,6 +82,17 @@ export const aiNudges = sqliteTable("ai_nudges", {
   createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
 });
 
+// Personal to-do list, managed conversationally through the Telegram bot
+// (and surfaced in the morning nudge). due is optional YYYY-MM-DD.
+export const todos = sqliteTable("todos", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  text: text("text").notNull(),
+  due: text("due"),
+  done: integer("done").notNull().default(0),
+  createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+  completedAt: text("completed_at"),
+});
+
 // Single row (id = 1): the one refresh token for the one user.
 export const googleTokens = sqliteTable("google_tokens", {
   id: integer("id").primaryKey(),

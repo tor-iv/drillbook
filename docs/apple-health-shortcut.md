@@ -93,3 +93,8 @@ dictated text) → **Speak** the `spoken` field from the response.
 
 These work from iPhone, Apple Watch ("Hey Siri" on the watch), CarPlay, and
 AirPods. Siri speaks back the running total.
+
+## 4. Coach nudges as iMessages
+
+See `imessage-shortcut.md` — four more time-of-day automations that pull the
+nudge text and send it to you as a native blue-bubble message.
