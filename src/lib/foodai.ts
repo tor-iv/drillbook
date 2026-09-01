@@ -94,7 +94,9 @@ export async function estimateMeal(input: {
   // when we have any, else the model's totals stand.
   let items: GroundedItem[] = [];
   if (raw.items.length > 0) {
-    items = await Promise.all(raw.items.map(groundItem));
+    // Sequential, not parallel — DEMO_KEY burst-limits concurrent lookups
+    // from one IP (intermittent 400s observed with Promise.all).
+    for (const item of raw.items) items.push(await groundItem(item));
     const fdcCount = items.filter((i) => i.source === "fdc").length;
     console.log(`[food] "${raw.name}": ${items.length} items, ${fdcCount} FDC-grounded, model total ${Math.round(raw.calories)}`);
   }
