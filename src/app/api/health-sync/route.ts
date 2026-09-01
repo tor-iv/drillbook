@@ -106,6 +106,13 @@ function toMi(qty: number, units?: string): number | null {
 }
 
 function haeToDays(payload: z.infer<typeof haeSchema>): z.infer<typeof daySchema>[] {
+  // Inventory every push so we can see what HAE actually sends (metrics we
+  // don't consume yet are skipped, but knowing they arrive guides what to
+  // wire up next).
+  const metricNames = (payload.data.metrics ?? []).map((m) => `${m.name}(${m.data.length})`);
+  const workoutNames = (payload.data.workouts ?? []).map((w) => w.name);
+  console.log(`[hae] push: metrics=[${metricNames.join(", ")}] workouts=[${workoutNames.join(", ")}]`);
+
   const days = new Map<string, z.infer<typeof daySchema>>();
   const dayFor = (date: string) => {
     let d = days.get(date);
