@@ -32,6 +32,17 @@ server — check `docker logs fieldhouse-drillbook-1` after the first sync
 and extend `HAE_TYPE_MAP` if something's missing). Re-syncs upsert, never
 duplicate.
 
+## What the extra metrics do (since 2026-09-01)
+
+Beyond weight and workouts, synced daily aggregates land in `day_metrics`
+and are consumed: **active + basal energy** replace the formula estimate in
+the energy balance (`burnSource: "measured"`), **steps / sleep / resting
+HR / exercise minutes** feed the coach's context (nudges, weekly plan) and
+show on the dashboard strip + trends charts. HRV and VO2max are stored for
+later. Enable in HAE: Active Energy, Basal Energy Burned, Step Count, Sleep
+Analysis, Resting Heart Rate, Apple Exercise Time (heart_rate raw samples
+are skipped server-side — no need to send them).
+
 ## Caveat
 
 iOS only lets apps read Health data while the phone is unlocked, so the
