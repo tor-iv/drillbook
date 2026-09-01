@@ -3,6 +3,11 @@
 Two Shortcuts connect your iPhone to Drillbook. Budget ~10 minutes.
 You'll need your `SHORTCUT_API_TOKEN` (from the server `.env`).
 
+> **Easier option for health data**: the Health Auto Export app syncs weight
+> and workouts automatically in the background — see
+> `health-auto-export.md`. If you use it, skip §1 below (it's the free
+> fallback) — the rest of this doc still applies.
+
 ## 1. "Tally Sync" — nightly Apple Health push (EASY 3-action version)
 
 The server now AI-parses raw Shortcut output, so the minimal version is:
