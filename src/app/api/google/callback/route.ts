@@ -6,9 +6,9 @@ export async function GET(req: NextRequest) {
   if (!(await isAuthenticated())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const code = req.nextUrl.searchParams.get("code");
-  const dest = req.nextUrl.clone();
-  dest.search = "";
-  dest.pathname = "/settings";
+  // Behind Caddy, req.nextUrl's host is the container id — redirect via the
+  // public APP_URL instead.
+  const dest = new URL("/settings", process.env.APP_URL ?? req.nextUrl.origin);
 
   if (!code) {
     dest.searchParams.set("google", "denied");
