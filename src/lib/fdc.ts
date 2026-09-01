@@ -20,10 +20,15 @@ export type GroundedItem = {
 };
 
 function nutrient(food: FdcFood, ids: number[], name: RegExp): number | null {
-  const hit = food.foodNutrients?.find(
+  const matches = (food.foodNutrients ?? []).filter(
     (n) => (n.nutrientId != null && ids.includes(n.nutrientId)) || (n.nutrientName != null && name.test(n.nutrientName)),
   );
-  return hit?.value ?? null;
+  // FNDDS lists Energy twice (kcal and kJ) — prefer kcal, convert kJ.
+  const kcal = matches.find((n) => /kcal/i.test(n.unitName ?? ""));
+  if (kcal?.value != null) return kcal.value;
+  const kj = matches.find((n) => /^kj$/i.test(n.unitName ?? ""));
+  if (kj?.value != null) return kj.value / 4.184;
+  return matches[0]?.value ?? null;
 }
 
 async function searchFood(query: string): Promise<FdcFood | null> {

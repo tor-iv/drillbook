@@ -173,12 +173,39 @@ async function runAction(a: Action): Promise<string> {
   return res.workouts.length ? `✓ ${res.workouts.map((w) => w.summary).join(", ")}` : "(no workout found)";
 }
 
+const classifySchema = z.object({ kind: z.enum(["meal", "workout", "unclear"]).catch("unclear") });
+
+// Route the photo by looking at it, not just the caption — food photos,
+// watch/app workout screenshots, and everything else go different ways.
+async function classifyPhoto(photo: { base64: string; mediaType: string }, caption: string): Promise<"meal" | "workout" | "unclear"> {
+  try {
+    const res = classifySchema.parse(
+      await askClaudeJson({
+        model: coachModel(),
+        system: `Classify this photo. "meal" = food or drink to be eaten. "workout" = a fitness tracker/watch/app screenshot or gym equipment showing a completed workout. "unclear" = anything else. The caption (if any) is a strong hint. Reply ONLY {"kind":"meal"|"workout"|"unclear"}.`,
+        content: [
+          { type: "image", source: { type: "base64", media_type: photo.mediaType as "image/jpeg", data: photo.base64 } },
+          { type: "text", text: caption ? `Caption: ${caption}` : "No caption." },
+        ],
+      }),
+    );
+    return res.kind;
+  } catch (e) {
+    console.error("[telegram] photo classify failed:", e);
+    return "unclear";
+  }
+}
+
 async function handlePhoto(fileId: string, caption: string): Promise<string> {
   const photo = await fetchTelegramPhoto(fileId);
   if (!photo) return "Couldn't download that photo — try again.";
   const workoutish = /\b(run|ran|lift|lifted|climb|swim|swam|workout|gym|erg|mi|miles|min)\b/i.test(caption);
+  const kind = workoutish ? "workout" : await classifyPhoto(photo, caption);
+  if (kind === "unclear") {
+    return "Can't tell what this is — resend it with a word or two (\"lunch\", \"morning run\").";
+  }
   const date = localDate();
-  if (workoutish) {
+  if (kind === "workout") {
     const res = await parseWorkouts({
       description: caption,
       imageBase64: photo.base64,

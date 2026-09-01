@@ -102,6 +102,48 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true, meal: row, confidence: estimate.confidence, question: estimate.question });
 }
 
+// Revise an existing meal with extra detail (answering the estimator's
+// follow-up question) — re-estimates and updates in place, no duplicate row.
+export async function PATCH(req: NextRequest) {
+  if (!(await isAuthenticated())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const body = (await req.json().catch(() => null)) as { id?: number; detail?: string } | null;
+  const id = Number(body?.id);
+  const detail = (body?.detail ?? "").trim().slice(0, 300);
+  if (!Number.isInteger(id) || !detail) return NextResponse.json({ error: "id and detail required" }, { status: 400 });
+  const meal = db.select().from(schema.meals).where(eq(schema.meals.id, id)).get();
+  if (!meal) return NextResponse.json({ error: "not found" }, { status: 404 });
+
+  const earlier = db
+    .select()
+    .from(schema.meals)
+    .where(and(eq(schema.meals.date, meal.date)))
+    .all()
+    .filter((m) => m.id !== id)
+    .map((m) => ({ name: m.name, calories: m.calories }));
+  let estimate;
+  try {
+    estimate = await estimateMeal({
+      description: `${meal.description ?? meal.name}. Additional detail: ${detail}`,
+      earlierMealsToday: earlier,
+    });
+  } catch (e) {
+    console.error("[meals] revise failed:", e);
+    return NextResponse.json({ error: "couldn't revise — try again" }, { status: 502 });
+  }
+  const row = db
+    .update(schema.meals)
+    .set({
+      name: estimate.name,
+      calories: estimate.calories,
+      protein: estimate.protein,
+      itemsJson: estimate.items.length ? JSON.stringify(estimate.items) : null,
+    })
+    .where(eq(schema.meals.id, id))
+    .returning()
+    .get();
+  return NextResponse.json({ ok: true, meal: row });
+}
+
 export async function DELETE(req: NextRequest) {
   if (!(await isAuthenticated())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const id = Number(req.nextUrl.searchParams.get("id"));
