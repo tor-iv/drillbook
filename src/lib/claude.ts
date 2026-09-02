@@ -1,7 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 
 // One Anthropic client for everything AI in Drillbook: coach text (nudges,
-// weekly plans) and food-photo estimates. Single provider, single key.
+// weekly plans), the chat router, and food-photo estimates. Single provider,
+// single key.
 let _client: Anthropic | null = null;
 
 export function claudeClient(): Anthropic {
@@ -26,10 +27,10 @@ export function claudeConfigured(): boolean {
  * - refusal and max_tokens stop reasons become distinct, readable errors.
  * - usage is logged so cost drift is visible in `docker compose logs`.
  */
-export async function askClaude(opts: {
+export async function askClaudeMessages(opts: {
   model: string;
   system: string;
-  content: string | Anthropic.ContentBlockParam[];
+  messages: Anthropic.MessageParam[];
   maxTokens?: number;
 }): Promise<string> {
   const response = await claudeClient().messages.create({
@@ -37,7 +38,7 @@ export async function askClaude(opts: {
     max_tokens: opts.maxTokens ?? 1500,
     ...(opts.model.includes("haiku") ? {} : { output_config: { effort: "low" as const } }),
     system: opts.system,
-    messages: [{ role: "user", content: opts.content }],
+    messages: opts.messages,
   });
 
   console.log(
@@ -50,10 +51,32 @@ export async function askClaude(opts: {
   return text;
 }
 
-/** askClaude + tolerant JSON extraction (strips stray prose/code fences). */
-export async function askClaudeJson(opts: Parameters<typeof askClaude>[0]): Promise<unknown> {
-  const text = await askClaude(opts);
+/** Single-turn convenience over askClaudeMessages. */
+export async function askClaude(opts: {
+  model: string;
+  system: string;
+  content: string | Anthropic.ContentBlockParam[];
+  maxTokens?: number;
+}): Promise<string> {
+  return askClaudeMessages({
+    model: opts.model,
+    system: opts.system,
+    maxTokens: opts.maxTokens,
+    messages: [{ role: "user", content: opts.content }],
+  });
+}
+
+/** Tolerant JSON extraction (strips stray prose/code fences). */
+export function extractJson(text: string): unknown {
   const match = text.match(/\{[\s\S]*\}/);
   if (!match) throw new Error(`no JSON in response: ${text.slice(0, 120)}`);
   return JSON.parse(match[0]);
+}
+
+export async function askClaudeJson(opts: Parameters<typeof askClaude>[0]): Promise<unknown> {
+  return extractJson(await askClaude(opts));
+}
+
+export async function askClaudeJsonMessages(opts: Parameters<typeof askClaudeMessages>[0]): Promise<unknown> {
+  return extractJson(await askClaudeMessages(opts));
 }

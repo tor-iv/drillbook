@@ -133,3 +133,21 @@ export const settings = sqliteTable("settings", {
   value: text("value").notNull(),
   updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
 });
+
+// One shared conversation with the coach across every channel (web chat,
+// Telegram). Assistant rows keep the structured output alongside the prose so
+// history can be replayed to the model in the exact JSON shape it must emit.
+export const chatMessages = sqliteTable(
+  "chat_messages",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    channel: text("channel", { enum: ["web", "telegram"] }).notNull(),
+    role: text("role", { enum: ["user", "assistant"] }).notNull(),
+    content: text("content").notNull(), // user: raw text or "[photo] caption"; assistant: reply prose
+    actionsJson: text("actions_json"), // assistant rows: Action[]
+    resultsJson: text("results_json"), // assistant rows: the "✓ ..." receipts
+    clientMsgId: text("client_msg_id"), // web idempotency key; null for telegram
+    createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+  },
+  (t) => [uniqueIndex("chat_messages_client_msg_id_idx").on(t.clientMsgId)],
+);
