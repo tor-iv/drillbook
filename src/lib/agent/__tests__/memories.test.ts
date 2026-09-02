@@ -33,3 +33,10 @@ describe("renderMemories", () => {
     expect(renderMemories(rows).length).toBeLessThanOrEqual(3000);
   });
 });
+
+describe("fuzzyFind whitespace", () => {
+  it("matches across differing internal whitespace", () => {
+    const items = [{ t: "gym is closed   Mondays" }];
+    expect(fuzzyFind(items, (i) => i.t, "closed mondays")).toBeDefined();
+  });
+});

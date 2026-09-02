@@ -1,6 +1,6 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { fuzzyFind } from "./match";
+import { fuzzyFind, normalizeText } from "./match";
 
 import { MEMORY_CATEGORIES, type MemoryCategory, type MemorySource } from "./memory-types";
 
@@ -38,23 +38,21 @@ export function formatMemories(): string {
   return renderMemories(activeMemories());
 }
 
-const normalize = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
-
-/** Insert, or bump an identical active memory in the same category. Returns the row. */
+/**
+ * Insert, or — when an active memory in the same category already says the
+ * same thing — keep the existing wording and just bump its recency.
+ */
 export function remember(category: MemoryCategory, content: string, source: MemorySource = "chat"): MemoryRow {
-  const clean = content.trim();
+  const clean = content.trim().replace(/\s+/g, " ");
   const dup = db
     .select()
     .from(schema.memories)
     .where(and(eq(schema.memories.category, category), eq(schema.memories.archived, false)))
     .all()
-    .find((r) => normalize(r.content) === normalize(clean));
+    .find((r) => normalizeText(r.content) === normalizeText(clean));
   if (dup) {
-    db.update(schema.memories)
-      .set({ content: clean, updatedAt: sql`(datetime('now'))` })
-      .where(eq(schema.memories.id, dup.id))
-      .run();
-    return { ...dup, content: clean };
+    db.update(schema.memories).set({ updatedAt: sql`(datetime('now'))` }).where(eq(schema.memories.id, dup.id)).run();
+    return dup;
   }
   return db.insert(schema.memories).values({ category, content: clean, source }).returning().get();
 }

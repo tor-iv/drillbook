@@ -59,7 +59,7 @@ export function BrainEditor({ initial }: { initial: MemoryRow[] }) {
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value as MemoryCategory)}
-            className="font-display border-b-2 border-ink bg-transparent text-base focus:outline-none"
+            className="font-display shrink-0 border-b-2 border-ink bg-transparent text-base focus:outline-none"
             aria-label="category"
           >
             {MEMORY_CATEGORIES.map((c) => (
@@ -73,7 +73,7 @@ export function BrainEditor({ initial }: { initial: MemoryRow[] }) {
             onChange={(e) => setContent(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && void add()}
             placeholder="Something worth remembering"
-            className="flex-1 border-b-2 border-ink bg-transparent text-base focus:outline-none"
+            className="min-w-0 flex-1 border-b-2 border-ink bg-transparent text-base focus:outline-none"
           />
           <button onClick={add} disabled={!content.trim()} className="btn-ink px-3 py-1 text-lg leading-none disabled:opacity-40">
             Add
@@ -98,7 +98,7 @@ export function BrainEditor({ initial }: { initial: MemoryRow[] }) {
                     onChange={(e) => setDrafts((d) => ({ ...d, [m.id]: e.target.value }))}
                     onBlur={() => saveDraft(m)}
                     onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-                    className="flex-1 bg-transparent text-base focus:border-b-2 focus:border-ink focus:outline-none"
+                    className="min-w-0 flex-1 bg-transparent text-base focus:border-b-2 focus:border-ink focus:outline-none"
                     aria-label="memory"
                   />
                   <button onClick={() => patch(m.id, { archived: true })} className="btn-paper px-2 py-1 text-xs" title="archive">

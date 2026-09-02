@@ -4,13 +4,18 @@
  * either string containing the other.
  */
 export function fuzzyFind<T>(items: T[], textOf: (t: T) => string, needle: string): T | undefined {
-  const n = needle.trim().toLowerCase();
+  const n = normalizeText(needle);
   if (!n) return undefined;
   return (
-    items.find((t) => textOf(t).toLowerCase() === n) ??
+    items.find((t) => normalizeText(textOf(t)) === n) ??
     items.find((t) => {
-      const h = textOf(t).toLowerCase();
+      const h = normalizeText(textOf(t));
       return h.includes(n) || n.includes(h);
     })
   );
+}
+
+/** Lowercase, trimmed, single-spaced — the comparison form for user text. */
+export function normalizeText(s: string): string {
+  return s.trim().toLowerCase().replace(/\s+/g, " ");
 }
