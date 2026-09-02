@@ -4,6 +4,7 @@ import { athleteProfile } from "@/lib/coach";
 import { getDayEnergy, getDayMetrics } from "@/lib/energy";
 import { getTodayStatus } from "@/lib/status";
 import { recentMealNames } from "./actions";
+import { formatMemories } from "./memories";
 
 /**
  * Everything the router model knows about right now, as one JSON-able object.
@@ -34,6 +35,7 @@ export async function buildRouterContext(message: string): Promise<Record<string
       : undefined,
     openTodos,
     recentMeals: recentMealNames(status.date),
+    memories: formatMemories() || undefined,
     message,
   };
 }

@@ -4,6 +4,8 @@ import { addDays, localDate } from "@/lib/dates";
 import { estimateMeal, foodModel } from "@/lib/foodai";
 import { createEvent, googleConnected } from "@/lib/google";
 import { parseWorkouts, workoutModel } from "@/lib/workoutai";
+import { fuzzyFind } from "./match";
+import { forget, remember } from "./memories";
 import type { Action } from "./schema";
 
 export function earlierMeals(date: string): { name: string; calories: number }[] {
@@ -66,16 +68,21 @@ export async function runAction(a: Action): Promise<string> {
   }
   if (a.type === "todo_done") {
     const open = db.select().from(schema.todos).where(eq(schema.todos.done, 0)).all();
-    const needle = a.match.toLowerCase();
-    const hit =
-      open.find((t) => t.text.toLowerCase() === needle) ??
-      open.find((t) => t.text.toLowerCase().includes(needle) || needle.includes(t.text.toLowerCase()));
+    const hit = fuzzyFind(open, (t) => t.text, a.match);
     if (!hit) return `(nothing open matching "${a.match}")`;
     db.update(schema.todos)
       .set({ done: 1, completedAt: new Date().toISOString() })
       .where(eq(schema.todos.id, hit.id))
       .run();
     return `✓ Done: ${hit.text}`;
+  }
+  if (a.type === "remember") {
+    const row = remember(a.category, a.content);
+    return `✓ Noted: ${row.content}`;
+  }
+  if (a.type === "forget") {
+    const row = forget(a.match);
+    return row ? `✓ Forgot: ${row.content}` : `(nothing in memory matching "${a.match}")`;
   }
   if (a.type === "calendar") {
     if (!googleConnected()) return "(calendar not connected — hit Connect in Settings first)";

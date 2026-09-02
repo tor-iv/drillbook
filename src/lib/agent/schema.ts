@@ -23,6 +23,12 @@ export const actionSchema = z.union([
   }),
   z.object({ type: z.literal("todo_done"), match: z.string().min(1) }),
   z.object({ type: z.literal("meal_revise"), detail: z.string().min(1) }),
+  z.object({
+    type: z.literal("remember"),
+    category: z.enum(["person", "schedule", "preference", "goal", "fact", "health"]),
+    content: z.string().min(1).max(300),
+  }),
+  z.object({ type: z.literal("forget"), match: z.string().min(1) }),
 ]);
 
 export const routerSchema = z.object({

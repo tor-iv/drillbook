@@ -151,3 +151,17 @@ export const chatMessages = sqliteTable(
   },
   (t) => [uniqueIndex("chat_messages_client_msg_id_idx").on(t.clientMsgId)],
 );
+
+// The brain: durable facts about Tor's life the coach should keep in mind —
+// people, recurring schedule constraints, preferences, goals, health facts.
+// Written by the chat router (remember/forget actions) and edited on /brain.
+// forget archives rather than deletes so a bad match is recoverable.
+export const memories = sqliteTable("memories", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  category: text("category", { enum: ["person", "schedule", "preference", "goal", "fact", "health"] }).notNull(),
+  content: text("content").notNull(),
+  source: text("source", { enum: ["chat", "manual"] }).notNull().default("chat"),
+  archived: integer("archived", { mode: "boolean" }).notNull().default(false),
+  createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+  updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
+});
