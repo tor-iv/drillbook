@@ -2,7 +2,7 @@ import { desc, eq, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { addDays, localDate } from "@/lib/dates";
 import { estimateMeal, foodModel } from "@/lib/foodai";
-import { createEvent, googleConnected } from "@/lib/google";
+import { createEvent, deleteEvent, googleConnected, listEvents } from "@/lib/google";
 import { parseWorkouts, workoutModel } from "@/lib/workoutai";
 import { fuzzyFind } from "./match";
 import { forget, remember } from "./memories";
@@ -95,6 +95,14 @@ export async function runAction(a: Action): Promise<string> {
     return ok
       ? `✓ Calendar: ${a.title} on ${a.date}${a.startTime ? ` at ${a.startTime}` : ""}`
       : "(calendar write failed)";
+  }
+  if (a.type === "calendar_delete") {
+    if (!googleConnected()) return "(calendar not connected — hit Connect in Settings first)";
+    const upcoming = await listEvents(date, 30);
+    const hit = a.eventId ? upcoming.find((e) => e.id === a.eventId) : fuzzyFind(upcoming, (e) => e.title, a.match ?? "");
+    if (!hit) return `(nothing on the calendar matching "${a.match ?? a.eventId}")`;
+    const ok = await deleteEvent(hit.id);
+    return ok ? `✓ Removed: ${hit.title} on ${hit.date}${hit.startTime ? ` at ${hit.startTime}` : ""}` : "(calendar delete failed)";
   }
   if (a.type === "meal") {
     const est = await estimateMeal({ description: a.description, earlierMealsToday: earlierMeals(date) });

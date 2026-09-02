@@ -29,6 +29,9 @@ export const actionSchema = z.union([
     content: z.string().min(1).max(300),
   }),
   z.object({ type: z.literal("forget"), match: z.string().min(1) }),
+  z
+    .object({ type: z.literal("calendar_delete"), eventId: z.string().min(1).nullish(), match: z.string().min(1).nullish() })
+    .refine((a) => a.eventId || a.match, { message: "eventId or match required" }),
 ]);
 
 export const routerSchema = z.object({

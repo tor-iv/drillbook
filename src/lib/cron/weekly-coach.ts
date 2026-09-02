@@ -6,6 +6,7 @@ import { localDate } from "@/lib/dates";
 import { and, gte, lte } from "drizzle-orm";
 import { getRangeBalances, goalWeightLb } from "@/lib/energy";
 import { getWeekStatus } from "@/lib/status";
+import { formatMemories } from "@/lib/agent/memories";
 import { alreadyRanToday, markRan } from "./guard";
 
 export async function runWeeklyCoach(force = false): Promise<string> {
@@ -33,6 +34,7 @@ export async function runWeeklyCoach(force = false): Promise<string> {
       };
       content = await coachSay(WEEKLY_COACH_SYSTEM, {
         athlete: athleteProfile(),
+        memories: formatMemories() || undefined,
         goalWeightLb: goalWeightLb(),
         dailyEnergyBalances: getRangeBalances(week.from, week.to),
         appleHealthWeek: rows.length

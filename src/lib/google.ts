@@ -1,4 +1,5 @@
 import { db, schema } from "@/db";
+import { addDays } from "@/lib/dates";
 
 // Hand-rolled Google OAuth + Calendar REST — the googleapis package is ~50MB
 // of generated clients for what is here two token calls and one events call.
@@ -57,9 +58,15 @@ export function googleConnected(): boolean {
   return !!db.select().from(schema.googleTokens).get();
 }
 
+// Access tokens last an hour; the chat router now reads the calendar on every
+// turn, so re-exchanging the refresh token per call would be wasteful. One
+// persistent Node process → a module-level cache is enough.
+let cachedToken: { token: string; expiresAt: number } | null = null;
+
 async function accessToken(): Promise<string | null> {
   const row = db.select().from(schema.googleTokens).get();
   if (!row) return null;
+  if (cachedToken && Date.now() < cachedToken.expiresAt) return cachedToken.token;
   const res = await fetch(TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -70,12 +77,79 @@ async function accessToken(): Promise<string | null> {
       grant_type: "refresh_token",
     }),
   });
-  const data = (await res.json()) as { access_token?: string; error?: string };
+  const data = (await res.json()) as { access_token?: string; expires_in?: number; error?: string };
   if (!res.ok || !data.access_token) {
     console.error("[google] refresh failed:", data.error ?? res.status);
     return null;
   }
+  cachedToken = { token: data.access_token, expiresAt: Date.now() + ((data.expires_in ?? 3600) - 60) * 1000 };
   return data.access_token;
+}
+
+function calendarBase(): string {
+  const row = db.select().from(schema.googleTokens).get();
+  return `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(row?.calendarId ?? "primary")}/events`;
+}
+
+export type CalendarEvent = {
+  id: string;
+  title: string;
+  date: string; // YYYY-MM-DD local
+  startTime?: string; // HH:MM local; absent for all-day
+  endTime?: string;
+};
+
+/**
+ * Events on [from, from+days) in the app's timezone. The API wants RFC3339
+ * bounds, so we over-fetch a day each side in UTC and filter on the local
+ * date Google hands back (timeZone= makes dateTime come in local time).
+ */
+export async function listEvents(from: string, days: number): Promise<CalendarEvent[]> {
+  const token = await accessToken();
+  if (!token) return [];
+  const timeZone = process.env.CRON_TIMEZONE ?? "America/New_York";
+  const end = addDays(from, days);
+  const params = new URLSearchParams({
+    singleEvents: "true",
+    orderBy: "startTime",
+    maxResults: "100",
+    timeZone,
+    timeMin: new Date(`${addDays(from, -1)}T00:00:00Z`).toISOString(),
+    timeMax: new Date(`${addDays(end, 1)}T00:00:00Z`).toISOString(),
+  });
+  const res = await fetch(`${calendarBase()}?${params}`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) {
+    console.error("[google] listEvents failed:", res.status, await res.text());
+    return [];
+  }
+  const data = (await res.json()) as {
+    items?: { id: string; summary?: string; status?: string; start?: { date?: string; dateTime?: string }; end?: { date?: string; dateTime?: string } }[];
+  };
+  return (data.items ?? [])
+    .filter((it) => it.status !== "cancelled")
+    .map((it) => {
+      const date = it.start?.date ?? it.start?.dateTime?.slice(0, 10) ?? "";
+      return {
+        id: it.id,
+        title: it.summary ?? "(untitled)",
+        date,
+        startTime: it.start?.dateTime?.slice(11, 16),
+        endTime: it.end?.dateTime?.slice(11, 16),
+      };
+    })
+    .filter((e) => e.date >= from && e.date < end);
+}
+
+export async function deleteEvent(id: string): Promise<boolean> {
+  const token = await accessToken();
+  if (!token) return false;
+  const res = await fetch(`${calendarBase()}/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (res.ok || res.status === 410) return true; // 410 = already gone
+  console.error("[google] deleteEvent failed:", res.status, await res.text());
+  return false;
 }
 
 /**

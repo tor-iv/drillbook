@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { athleteProfile } from "@/lib/coach";
 import { getDayEnergy, getDayMetrics } from "@/lib/energy";
+import { googleConnected, listEvents } from "@/lib/google";
 import { getTodayStatus } from "@/lib/status";
 import { recentMealNames } from "./actions";
 import { formatMemories } from "./memories";
@@ -20,6 +21,14 @@ export async function buildRouterContext(message: string): Promise<Record<string
     .where(eq(schema.todos.done, 0))
     .all()
     .map((t) => ({ text: t.text, due: t.due ?? undefined }));
+  // Omitted entirely when not connected so "no calendar" and "empty week"
+  // read differently to the model.
+  const upcomingEvents = googleConnected()
+    ? await listEvents(status.date, 7).catch((e) => {
+        console.error("[agent] calendar read failed:", e);
+        return [];
+      })
+    : undefined;
   return {
     athlete: athleteProfile(),
     today: status,
@@ -36,6 +45,7 @@ export async function buildRouterContext(message: string): Promise<Record<string
     openTodos,
     recentMeals: recentMealNames(status.date),
     memories: formatMemories() || undefined,
+    upcomingEvents,
     message,
   };
 }

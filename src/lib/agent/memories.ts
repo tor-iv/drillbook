@@ -2,11 +2,10 @@ import { and, desc, eq, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { fuzzyFind } from "./match";
 
-export type MemoryRow = typeof schema.memories.$inferSelect;
-export type MemoryCategory = MemoryRow["category"];
-export type MemorySource = MemoryRow["source"];
+import { MEMORY_CATEGORIES, type MemoryCategory, type MemorySource } from "./memory-types";
 
-export const MEMORY_CATEGORIES: MemoryCategory[] = ["person", "schedule", "preference", "goal", "fact", "health"];
+export type MemoryRow = typeof schema.memories.$inferSelect;
+export { MEMORY_CATEGORIES, type MemoryCategory, type MemorySource };
 
 /** Bounds on what rides along in every prompt, even if the brain hoards. */
 export const MAX_MEMORY_ROWS = 60;
