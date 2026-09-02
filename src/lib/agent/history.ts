@@ -86,3 +86,16 @@ export function parseJson<T>(raw: string | null, fallback: T): T {
     return fallback;
   }
 }
+
+/** UI/API shape of a message: results parsed, internals dropped. */
+export function toWire(r: ChatRow) {
+  return {
+    id: r.id,
+    channel: r.channel,
+    role: r.role,
+    content: r.content,
+    results: parseJson<string[]>(r.resultsJson, []),
+    createdAt: r.createdAt,
+  };
+}
+export type WireMessage = ReturnType<typeof toWire>;
