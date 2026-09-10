@@ -16,7 +16,7 @@ const DAILY_DEFICIT_TARGET = Number(process.env.DAILY_DEFICIT_TARGET ?? 400);
 const LB_PER_KG = 2.2046226218;
 
 // kcal/hour ≈ MET × kg; used only when Apple Health didn't supply calories.
-const MET: Record<string, number> = { run: 10, swim: 8, climb: 6, lift: 5, other: 5 };
+const MET: Record<string, number> = { run: 10, swim: 8, climb: 6, lift: 5, sport: 6.5, other: 5 };
 
 export function goalWeightLb(): number {
   return GOAL_WEIGHT_LB;

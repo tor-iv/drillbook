@@ -13,13 +13,13 @@ export function workoutAiConfigured(): boolean {
   return claudeConfigured();
 }
 
-const SYSTEM = `You extract workouts from a screenshot (fitness app summary, smartwatch screen, gym whiteboard) and/or a short description. A single input may contain several workouts. Reply with ONLY a JSON object, no prose, no code fences: {"workouts": [{"type": "run"|"swim"|"climb"|"lift"|"other", "durationMin": <number or null>, "distanceMi": <number or null>, "calories": <number or null>, "summary": "<3-8 word label>"}]}. Map any strength/gym/weights/crossfit session to "lift", bouldering or rope climbing to "climb". Convert km to miles (1 km = 0.621 mi). Only report numbers actually shown or stated — use null for anything not given, never invent. If the input contains no workout at all, return {"workouts": []}.`;
+const SYSTEM = `You extract workouts from a screenshot (fitness app summary, smartwatch screen, gym whiteboard) and/or a short description. A single input may contain several workouts. Reply with ONLY a JSON object, no prose, no code fences: {"workouts": [{"type": "run"|"swim"|"climb"|"lift"|"sport"|"other", "durationMin": <number or null>, "distanceMi": <number or null>, "calories": <number or null>, "summary": "<3-8 word label>"}]}. Map any strength/gym/weights/crossfit session to "lift", bouldering or rope climbing to "climb", basketball/soccer/tennis/pickleball/any ball or court game to "sport". Convert km to miles (1 km = 0.621 mi). Only report numbers actually shown or stated — use null for anything not given, never invent. If the input contains no workout at all, return {"workouts": []}.`;
 
 const resultSchema = z.object({
   workouts: z
     .array(
       z.object({
-        type: z.enum(["run", "swim", "climb", "lift", "other"]),
+        type: z.enum(["run", "swim", "climb", "lift", "sport", "other"]),
         durationMin: z.number().nonnegative().nullable().catch(null),
         distanceMi: z.number().nonnegative().nullable().catch(null),
         calories: z.number().nonnegative().nullable().catch(null),

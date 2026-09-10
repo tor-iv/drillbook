@@ -13,7 +13,7 @@ import { spawn } from "node:child_process";
 import sax from "sax";
 
 type Workout = {
-  type: "run" | "swim" | "climb" | "lift" | "other";
+  type: "run" | "swim" | "climb" | "lift" | "sport" | "other";
   durationMin: number | null;
   distanceMi: number | null;
   calories: number | null;
@@ -43,6 +43,11 @@ const TYPE_MAP: Record<string, Workout["type"]> = {
   HKWorkoutActivityTypeRockClimbing: "climb",
   HKWorkoutActivityTypeTraditionalStrengthTraining: "lift",
   HKWorkoutActivityTypeFunctionalStrengthTraining: "lift",
+  HKWorkoutActivityTypeBasketball: "sport",
+  HKWorkoutActivityTypeSoccer: "sport",
+  HKWorkoutActivityTypeTennis: "sport",
+  HKWorkoutActivityTypePickleball: "sport",
+  HKWorkoutActivityTypeVolleyball: "sport",
 };
 
 const LB_PER_KG = 2.2046226218;

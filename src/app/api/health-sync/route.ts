@@ -8,7 +8,7 @@ import { localDate } from "@/lib/dates";
 import { workoutModel } from "@/lib/workoutai";
 
 const workoutSchema = z.object({
-  type: z.enum(["run", "swim", "climb", "lift", "other"]),
+  type: z.enum(["run", "swim", "climb", "lift", "sport", "other"]),
   durationMin: z.number().nonnegative().nullable().optional(),
   distanceMi: z.number().nonnegative().nullable().optional(),
   calories: z.number().nonnegative().nullable().optional(),
@@ -71,7 +71,7 @@ const dumpResultSchema = z.object({
   workouts: z
     .array(
       z.object({
-        type: z.enum(["run", "swim", "climb", "lift", "other"]),
+        type: z.enum(["run", "swim", "climb", "lift", "sport", "other"]),
         durationMin: z.number().nonnegative().nullable().catch(null),
         distanceMi: z.number().nonnegative().nullable().catch(null),
         calories: z.number().nonnegative().nullable().catch(null),
@@ -87,6 +87,7 @@ const HAE_TYPE_MAP: [RegExp, z.infer<typeof workoutSchema>["type"]][] = [
   [/swim/i, "swim"],
   [/climb|boulder/i, "climb"],
   [/strength|functional|core|weight|lift/i, "lift"],
+  [/basketball|soccer|tennis|pickleball|volleyball|football|hockey|squash|racquet/i, "sport"],
 ];
 
 // HAE dates look like "2026-09-01 07:00:00 -0400".

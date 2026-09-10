@@ -38,7 +38,7 @@ export const workouts = sqliteTable(
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
     date: text("date").notNull(),
-    type: text("type", { enum: ["run", "swim", "climb", "lift", "other"] }).notNull(),
+    type: text("type", { enum: ["run", "swim", "climb", "lift", "sport", "other"] }).notNull(),
     durationMin: real("duration_min"),
     distanceMi: real("distance_mi"),
     calories: real("calories"),

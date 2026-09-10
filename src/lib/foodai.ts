@@ -57,7 +57,21 @@ export type FoodEstimate = {
   confidence: "high" | "low";
   question: string | null;
   items: GroundedItem[];
+  /** How many items came from the USDA database vs the model's own numbers. */
+  grounded: { fdc: number; total: number };
 };
+
+// Physical bounds on energy density: pure fat is 9 kcal/g, nothing edible is
+// denser; below ~0.1 kcal/g is basically water. An item outside the band is a
+// unit slip (kJ, per-serving vs per-100g, grams vs ounces), so keep the item
+// but mark it un-grounded so the audit surfaces it.
+export const MAX_KCAL_PER_GRAM = 9.2;
+export const MIN_KCAL_PER_GRAM = 0.05;
+export function plausibleDensity(item: { grams: number; kcal: number }): boolean {
+  if (item.grams <= 0) return false;
+  const d = item.kcal / item.grams;
+  return d >= MIN_KCAL_PER_GRAM && d <= MAX_KCAL_PER_GRAM;
+}
 
 const MEDIA_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"] as const);
 type MediaType = "image/jpeg" | "image/png" | "image/webp" | "image/gif";
@@ -98,7 +112,15 @@ export async function estimateMeal(input: {
   if (raw.items.length > 0) {
     // Sequential, not parallel — DEMO_KEY burst-limits concurrent lookups
     // from one IP (intermittent 400s observed with Promise.all).
-    for (const item of raw.items) items.push(await groundItem(item));
+    for (const item of raw.items) {
+      const g = await groundItem(item);
+      if (!plausibleDensity(g)) {
+        console.warn(`[food] implausible density for "${g.food}": ${Math.round(g.kcal)} kcal / ${g.grams} g — keeping model number`);
+        items.push({ ...item, source: "model" });
+      } else {
+        items.push(g);
+      }
+    }
     const fdcCount = items.filter((i) => i.source === "fdc").length;
     console.log(`[food] "${raw.name}": ${items.length} items, ${fdcCount} FDC-grounded, model total ${Math.round(raw.calories)}`);
   }
@@ -112,5 +134,6 @@ export async function estimateMeal(input: {
     confidence: raw.confidence,
     question: raw.confidence === "low" ? raw.question : null,
     items,
+    grounded: { fdc: items.filter((i) => i.source === "fdc").length, total: items.length },
   };
 }

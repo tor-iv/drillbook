@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
     .get();
 
   // confidence/question are advisory UI feedback for this one response, not stored.
-  return NextResponse.json({ ok: true, meal: row, confidence: estimate.confidence, question: estimate.question });
+  return NextResponse.json({ ok: true, meal: row, confidence: estimate.confidence, question: estimate.question, grounded: estimate.grounded });
 }
 
 // Revise an existing meal: either with extra detail (AI re-estimate — the
