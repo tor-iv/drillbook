@@ -46,6 +46,12 @@ pnpm import:health -- --zip <export.zip> --url <base> --token <token>
   claude-haiku-4-5 (COACH_MODEL / FOOD_MODEL envs). Every integration
   (LLM, Resend, Google) has a `*Configured()` guard and a working fallback —
   keep it that way.
+- **Native apps live in `apple/`** (iOS + watchOS, SwiftUI, XcodeGen). They
+  authenticate with device tokens (`POST /api/auth/device`, hashed in
+  `device_tokens`); every user route accepts cookie OR bearer through
+  `authorized(req)` in `src/lib/auth.ts` — never add a route with only
+  `isAuthenticated()`. HealthKit posts the Health Auto Export payload shape,
+  so `/api/health-sync` is the contract for both. See `apple/README.md`.
 - **Docker footgun**: the runner stage COPYs better-sqlite3 out of
   `.pnpm/better-sqlite3@*` with a wildcard — don't pin the version there.
 
