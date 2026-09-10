@@ -2,7 +2,7 @@ import { eq, sql } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db, schema } from "@/db";
-import { hasShortcutToken } from "@/lib/auth";
+import { authorized } from "@/lib/auth";
 import { localDate } from "@/lib/dates";
 import { estimateMeal, foodAiConfigured, foodModel } from "@/lib/foodai";
 import { parseWorkouts, workoutModel } from "@/lib/workoutai";
@@ -17,7 +17,7 @@ const bodySchema = z.union([
 ]);
 
 export async function POST(req: NextRequest) {
-  if (!hasShortcutToken(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!(await authorized(req))) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: parsed.error.message }, { status: 400 });
   const input = parsed.data;

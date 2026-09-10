@@ -12,6 +12,7 @@ the shared fieldhouse compose stack (Hetzner, 5.161.201.101).
 pnpm dev          # dev server (Node — do NOT use bun, better-sqlite3 ABI breaks)
 pnpm build        # production build (standalone)
 pnpm lint
+pnpm test         # vitest, pure agent logic only (transcript replay, matching, memory caps)
 pnpm db:generate  # drizzle-kit migration from src/db/schema.ts
 pnpm db:migrate   # apply migrations + seed default activities
 pnpm import:health -- --zip <export.zip> --url <base> --token <token>
@@ -32,11 +33,25 @@ pnpm import:health -- --zip <export.zip> --url <base> --token <token>
   `SHORTCUT_API_TOKEN` bearer auth.
 - **Photos are private**: stored under `UPLOAD_DIR`, served only through the
   cookie-checked `/api/photos/[id]/file` route. Never put them in `public/`.
+- **One conversational brain**: `src/lib/agent/` is the only place chat is
+  routed (`routeMessage`) — Telegram (`/api/telegram`) and the web `/chat`
+  (`/api/chat`) are thin channels into it. `chat_messages` is one shared
+  history across channels (assistant rows keep `actions_json` so replay
+  matches the JSON the router must emit); `memories` is the editable brain
+  (`/brain`, `remember`/`forget` actions, injected into chat AND nudges).
+  New ability = variant in `agent/schema.ts` + branch in `agent/actions.ts`
+  + a line in `agent/prompt.ts`. Never call Claude for chat outside it.
 - **All AI through one Anthropic key** (`src/lib/claude.ts`): coach text in
   `src/lib/coach.ts`, food vision in `src/lib/foodai.ts`, both default to
   claude-haiku-4-5 (COACH_MODEL / FOOD_MODEL envs). Every integration
   (LLM, Resend, Google) has a `*Configured()` guard and a working fallback —
   keep it that way.
+- **Native apps live in `apple/`** (iOS + watchOS, SwiftUI, XcodeGen). They
+  authenticate with device tokens (`POST /api/auth/device`, hashed in
+  `device_tokens`); every user route accepts cookie OR bearer through
+  `authorized(req)` in `src/lib/auth.ts` — never add a route with only
+  `isAuthenticated()`. HealthKit posts the Health Auto Export payload shape,
+  so `/api/health-sync` is the contract for both. See `apple/README.md`.
 - **Docker footgun**: the runner stage COPYs better-sqlite3 out of
   `.pnpm/better-sqlite3@*` with a wildcard — don't pin the version there.
 

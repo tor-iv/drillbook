@@ -12,3 +12,8 @@ data/
 next-env.d.ts
 *.tsbuildinfo
 .DS_Store
+
+# Xcode project is generated from apple/project.yml
+apple/*.xcodeproj
+apple/**/xcuserdata
+apple/DerivedData

@@ -38,7 +38,7 @@ export const workouts = sqliteTable(
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
     date: text("date").notNull(),
-    type: text("type", { enum: ["run", "swim", "climb", "lift", "other"] }).notNull(),
+    type: text("type", { enum: ["run", "swim", "climb", "lift", "sport", "other"] }).notNull(),
     durationMin: real("duration_min"),
     distanceMi: real("distance_mi"),
     calories: real("calories"),
@@ -132,4 +132,46 @@ export const settings = sqliteTable("settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
   updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
+});
+
+// One shared conversation with the coach across every channel (web chat,
+// Telegram). Assistant rows keep the structured output alongside the prose so
+// history can be replayed to the model in the exact JSON shape it must emit.
+export const chatMessages = sqliteTable(
+  "chat_messages",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    channel: text("channel", { enum: ["web", "telegram"] }).notNull(),
+    role: text("role", { enum: ["user", "assistant"] }).notNull(),
+    content: text("content").notNull(), // user: raw text or "[photo] caption"; assistant: reply prose
+    actionsJson: text("actions_json"), // assistant rows: Action[]
+    resultsJson: text("results_json"), // assistant rows: the "✓ ..." receipts
+    clientMsgId: text("client_msg_id"), // web idempotency key; null for telegram
+    createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+  },
+  (t) => [uniqueIndex("chat_messages_client_msg_id_idx").on(t.clientMsgId)],
+);
+
+// The brain: durable facts about Tor's life the coach should keep in mind —
+// people, recurring schedule constraints, preferences, goals, health facts.
+// Written by the chat router (remember/forget actions) and edited on /brain.
+// forget archives rather than deletes so a bad match is recoverable.
+export const memories = sqliteTable("memories", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  category: text("category", { enum: ["person", "schedule", "preference", "goal", "fact", "health"] }).notNull(),
+  content: text("content").notNull(),
+  source: text("source", { enum: ["chat", "manual"] }).notNull().default("chat"),
+  archived: integer("archived", { mode: "boolean" }).notNull().default(false),
+  createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+  updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
+});
+
+// Long-lived bearer tokens for native clients (iPhone, Watch). Only the
+// SHA-256 of the token is stored; the plaintext is shown once at mint time.
+export const deviceTokens = sqliteTable("device_tokens", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  tokenHash: text("token_hash").notNull().unique(),
+  createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+  lastSeenAt: text("last_seen_at"),
 });

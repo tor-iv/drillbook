@@ -1,8 +1,11 @@
+import Link from "next/link";
 import { asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { googleConfigured, googleConnected } from "@/lib/google";
 import { GoalEditor } from "@/components/goal-editor";
 import { SmsOptIn } from "@/components/sms-opt-in";
+import { DeviceTokens } from "@/components/device-tokens";
+import { listDeviceTokens } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +22,22 @@ export default async function SettingsPage({
   return (
     <main>
       <h1 className="font-display mb-4 text-4xl leading-none">Setup</h1>
+
+      <section className="mb-6">
+        <h2 className="font-display mb-2 text-2xl">Devices</h2>
+        <DeviceTokens initial={listDeviceTokens()} />
+      </section>
+
+      <section className="mb-6">
+        <h2 className="font-display mb-2 text-2xl">Brain</h2>
+        <p className="text-sm text-pencil">
+          Facts Tally remembers from chat — people, schedule, preferences.{" "}
+          <Link href="/brain" className="underline">
+            Review and edit
+          </Link>
+          .
+        </p>
+      </section>
 
       <section className="mb-6">
         <h2 className="font-display mb-2 text-2xl">Daily goals</h2>

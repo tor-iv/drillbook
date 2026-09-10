@@ -1,7 +1,7 @@
 import { desc, eq, sql } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/db";
-import { hasShortcutToken } from "@/lib/auth";
+import { authorized } from "@/lib/auth";
 import type { NudgeSlot } from "@/lib/coach";
 import { runDailyNudge } from "@/lib/cron/daily-nudge";
 import { localDate } from "@/lib/dates";
@@ -24,7 +24,7 @@ function latestNudge(kind: "daily" | "weekly", date?: string): string | null {
 }
 
 export async function GET(req: NextRequest) {
-  if (!hasShortcutToken(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!(await authorized(req))) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const params = req.nextUrl.searchParams;
   if (params.get("kind") === "weekly") {

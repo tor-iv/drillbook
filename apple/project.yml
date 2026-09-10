@@ -1,0 +1,103 @@
+# XcodeGen spec — `xcodegen generate` rebuilds Tally.xcodeproj from this file.
+# The .xcodeproj is gitignored on purpose: this file is the readable source of truth.
+name: Tally
+options:
+  bundleIdPrefix: me.torcox
+  deploymentTarget:
+    iOS: "17.0"
+    watchOS: "10.0"
+  xcodeVersion: "26.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.10"
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: ""   # set once after signing in to Xcode with the Apple ID
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+packages:
+  TallyKit:
+    path: TallyKit
+targets:
+  Tally:
+    type: application
+    platform: iOS
+    sources: [Tally]
+    dependencies:
+      - package: TallyKit
+      - target: TallyWatch
+    info:
+      path: Tally/Info.plist
+      properties:
+        CFBundleDisplayName: Tally
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        NSHealthShareUsageDescription: Tally reads workouts, weight, energy, steps, sleep and heart data to keep your coach's numbers current.
+        NSHealthUpdateUsageDescription: Tally does not write to Health.
+        NSCameraUsageDescription: Snap a meal or a workout screenshot to log it.
+        NSPhotoLibraryUsageDescription: Pick a meal photo to log it.
+        BGTaskSchedulerPermittedIdentifiers: [me.torcox.tally.refresh]
+        UIBackgroundModes: [fetch, processing]
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true   # dev builds talk to the Mac over LAN http
+    entitlements:
+      path: Tally/Tally.entitlements
+      properties:
+        com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.background-delivery: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: me.torcox.tally
+        TARGETED_DEVICE_FAMILY: "1"
+  TallyWatch:
+    type: application.watchapp2
+    platform: watchOS
+    sources: [TallyWatch]
+    dependencies:
+      - package: TallyKit
+      - target: TallyWatchWidgets
+    info:
+      path: TallyWatch/Info.plist
+      properties:
+        CFBundleDisplayName: Tally
+        WKCompanionAppBundleIdentifier: me.torcox.tally
+        WKRunsIndependentlyOfCompanionApp: true
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+    entitlements:
+      path: TallyWatch/TallyWatch.entitlements
+      properties:
+        com.apple.security.application-groups: [group.me.torcox.tally]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: me.torcox.tally.watchkitapp
+  TallyWatchWidgets:
+    type: app-extension
+    platform: watchOS
+    sources: [TallyWatchWidgets]
+    dependencies:
+      - package: TallyKit
+    info:
+      path: TallyWatchWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: Tally
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: TallyWatchWidgets/TallyWatchWidgets.entitlements
+      properties:
+        com.apple.security.application-groups: [group.me.torcox.tally]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: me.torcox.tally.watchkitapp.widgets
+schemes:
+  Tally:
+    build:
+      targets: { Tally: all }
+    run:
+      config: Debug
+  TallyWatch:
+    build:
+      targets: { TallyWatch: all }
+    run:
+      config: Debug

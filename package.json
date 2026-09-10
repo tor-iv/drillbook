@@ -13,10 +13,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:seed": "tsx scripts/seed-activities.ts",
-    "import:health": "tsx scripts/import-apple-health.ts"
+    "import:health": "tsx scripts/import-apple-health.ts",
+    "audit:meals": "tsx scripts/audit-meals.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.121.0",
@@ -45,6 +47,7 @@
     "sax": "^1.4.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.12",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.11"
   }
 }

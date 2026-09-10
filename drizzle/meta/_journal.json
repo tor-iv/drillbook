@@ -36,6 +36,27 @@
       "when": 1788279554440,
       "tag": "0004_eager_rick_jones",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1788368225390,
+      "tag": "0005_demonic_newton_destine",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1788368399162,
+      "tag": "0006_jazzy_warpath",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1789004740225,
+      "tag": "0007_bright_falcon",
+      "breakpoints": true
     }
   ]
 }

@@ -9,6 +9,7 @@ import { getDayEnergy, getDayMetrics } from "@/lib/energy";
 import { sendNudgeSms } from "@/lib/sms";
 import { sendOwnerTelegram } from "@/lib/telegram";
 import { getTodayStatus } from "@/lib/status";
+import { formatMemories } from "@/lib/agent/memories";
 import { alreadyRanToday, markRan } from "./guard";
 
 export async function runDailyNudge(force = false, slot: NudgeSlot = "evening"): Promise<string> {
@@ -38,6 +39,7 @@ export async function runDailyNudge(force = false, slot: NudgeSlot = "evening"):
         athlete: athleteProfile(),
         date: today,
         openTodos: openTodos.length ? openTodos : undefined,
+        memories: formatMemories() || undefined,
         yesterdaySummary: slot === "morning" ? getTodayStatus(addDays(today, -1)).summary : undefined,
         activities: status.activities
           .filter((a) => a.kind === "counter")
