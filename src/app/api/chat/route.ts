@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { handlePhotoBytes } from "@/lib/agent/photo";
 import { findByClientMsgId, listRecent, parseJson, persistTurn, toWire } from "@/lib/agent/history";
 import { routeMessage } from "@/lib/agent/route-message";
-import { isAuthenticated } from "@/lib/auth";
+import { authorized } from "@/lib/auth";
 import { claudeConfigured } from "@/lib/claude";
 
 const MAX_BYTES = 15 * 1024 * 1024;
 
 
 export async function GET(req: NextRequest) {
-  if (!(await isAuthenticated())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!(await authorized(req))) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const before = Number(req.nextUrl.searchParams.get("before")) || undefined;
   return NextResponse.json({ messages: listRecent(before).map(toWire) });
 }
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
 // multipart form: `text` and/or `photo`, plus `clientMsgId` (client-generated)
 // so a retried send never runs the model — or its actions — twice.
 export async function POST(req: NextRequest) {
-  if (!(await isAuthenticated())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!(await authorized(req))) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   if (!claudeConfigured()) return NextResponse.json({ error: "AI not configured" }, { status: 503 });
 
   const form = await req.formData().catch(() => null);

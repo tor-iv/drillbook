@@ -2,7 +2,7 @@ import { eq, sql } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db, schema } from "@/db";
-import { hasShortcutToken } from "@/lib/auth";
+import { authorized } from "@/lib/auth";
 import { askClaudeJson } from "@/lib/claude";
 import { localDate } from "@/lib/dates";
 import { workoutModel } from "@/lib/workoutai";
@@ -252,7 +252,7 @@ function upsertDay(day: z.infer<typeof daySchema>): { workouts: number; weight: 
 }
 
 export async function POST(req: NextRequest) {
-  if (!hasShortcutToken(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!(await authorized(req))) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {

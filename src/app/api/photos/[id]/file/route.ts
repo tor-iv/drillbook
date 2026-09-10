@@ -4,7 +4,7 @@ import { basename, join } from "node:path";
 import { Readable } from "node:stream";
 import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/db";
-import { isAuthenticated } from "@/lib/auth";
+import { authorized } from "@/lib/auth";
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR ?? "./data/photos";
 const MIME: Record<string, string> = {
@@ -16,8 +16,8 @@ const MIME: Record<string, string> = {
 
 // Photos are served through this cookie-checked handler, never from public/ —
 // that is the entire privacy model for progress pics.
-export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  if (!(await isAuthenticated())) return new NextResponse("unauthorized", { status: 401 });
+export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  if (!(await authorized(req))) return new NextResponse("unauthorized", { status: 401 });
 
   const { id } = await ctx.params;
   const photo = db.select().from(schema.photos).where(eq(schema.photos.id, Number(id))).get();

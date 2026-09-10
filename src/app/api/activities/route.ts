@@ -2,10 +2,10 @@ import { asc, eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db, schema } from "@/db";
-import { isAuthenticated } from "@/lib/auth";
+import { authorized } from "@/lib/auth";
 
-export async function GET() {
-  if (!(await isAuthenticated())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+export async function GET(req: NextRequest) {
+  if (!(await authorized(req))) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const rows = db.select().from(schema.activities).orderBy(asc(schema.activities.sortOrder)).all();
   return NextResponse.json({ activities: rows });
 }
@@ -18,7 +18,7 @@ const patchSchema = z.object({
 });
 
 export async function PATCH(req: NextRequest) {
-  if (!(await isAuthenticated())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!(await authorized(req))) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const parsed = patchSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: parsed.error.message }, { status: 400 });
 
@@ -40,7 +40,7 @@ const postSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  if (!(await isAuthenticated())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!(await authorized(req))) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const parsed = postSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: parsed.error.message }, { status: 400 });
 

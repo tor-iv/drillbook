@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
 import { db, schema } from "@/db";
-import { isAuthenticated } from "@/lib/auth";
+import { authorized } from "@/lib/auth";
 import { localDate } from "@/lib/dates";
 import { estimateMeal, foodAiConfigured, foodModel } from "@/lib/foodai";
 
@@ -13,7 +13,7 @@ const UPLOAD_DIR = process.env.UPLOAD_DIR ?? "./data/photos";
 const MAX_BYTES = 15 * 1024 * 1024;
 
 export async function GET(req: NextRequest) {
-  if (!(await isAuthenticated())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!(await authorized(req))) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const date = req.nextUrl.searchParams.get("date") ?? localDate();
   const rows = db
     .select()
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
 // multipart form: optional `photo` file, optional `description` text (at least
 // one required), optional `date`.
 export async function POST(req: NextRequest) {
-  if (!(await isAuthenticated())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!(await authorized(req))) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   // JSON body {cloneId} re-logs a past meal verbatim — exact repeat, no AI
   // (so this branch stays above the AI-configured gate).
@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
 // follow-up-question flow) or with per-item gram corrections (pure linear
 // rescale, no AI — the portion-editing flow).
 export async function PATCH(req: NextRequest) {
-  if (!(await isAuthenticated())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!(await authorized(req))) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const body = (await req.json().catch(() => null)) as { id?: number; detail?: string; grams?: number[] } | null;
   const id = Number(body?.id);
   const detail = (body?.detail ?? "").trim().slice(0, 300);
@@ -198,7 +198,7 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  if (!(await isAuthenticated())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!(await authorized(req))) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const id = Number(req.nextUrl.searchParams.get("id"));
   if (!Number.isInteger(id)) return NextResponse.json({ error: "id required" }, { status: 400 });
   db.delete(schema.meals).where(and(eq(schema.meals.id, id))).run();

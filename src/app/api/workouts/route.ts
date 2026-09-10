@@ -1,14 +1,14 @@
 import { desc, eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/db";
-import { isAuthenticated } from "@/lib/auth";
+import { authorized } from "@/lib/auth";
 import { localDate } from "@/lib/dates";
 import { parseWorkouts, workoutAiConfigured, workoutModel } from "@/lib/workoutai";
 
 const MAX_BYTES = 15 * 1024 * 1024;
 
 export async function GET(req: NextRequest) {
-  if (!(await isAuthenticated())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!(await authorized(req))) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const date = req.nextUrl.searchParams.get("date") ?? localDate();
   const rows = db
     .select()
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
 // multipart form: optional `photo` (screenshot), optional `description` —
 // at least one required. AI parses into 0..n structured workouts.
 export async function POST(req: NextRequest) {
-  if (!(await isAuthenticated())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!(await authorized(req))) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   if (!workoutAiConfigured()) {
     return NextResponse.json({ error: "ANTHROPIC_API_KEY not configured" }, { status: 500 });
   }
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  if (!(await isAuthenticated())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!(await authorized(req))) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const id = Number(req.nextUrl.searchParams.get("id"));
   if (!Number.isInteger(id)) return NextResponse.json({ error: "id required" }, { status: 400 });
   db.delete(schema.workouts).where(eq(schema.workouts.id, id)).run();

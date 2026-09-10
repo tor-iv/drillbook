@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
 import { db, schema } from "@/db";
-import { isAuthenticated } from "@/lib/auth";
+import { authorized } from "@/lib/auth";
 import { localDate } from "@/lib/dates";
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR ?? "./data/photos";
@@ -17,14 +17,14 @@ const ALLOWED = new Map([
   ["image/heic", "heic"],
 ]);
 
-export async function GET() {
-  if (!(await isAuthenticated())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+export async function GET(req: NextRequest) {
+  if (!(await authorized(req))) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const rows = db.select().from(schema.photos).orderBy(desc(schema.photos.takenAt)).all();
   return NextResponse.json({ photos: rows });
 }
 
 export async function POST(req: NextRequest) {
-  if (!(await isAuthenticated())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!(await authorized(req))) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const form = await req.formData().catch(() => null);
   const file = form?.get("file");

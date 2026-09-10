@@ -165,3 +165,13 @@ export const memories = sqliteTable("memories", {
   createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
   updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
 });
+
+// Long-lived bearer tokens for native clients (iPhone, Watch). Only the
+// SHA-256 of the token is stored; the plaintext is shown once at mint time.
+export const deviceTokens = sqliteTable("device_tokens", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  tokenHash: text("token_hash").notNull().unique(),
+  createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+  lastSeenAt: text("last_seen_at"),
+});

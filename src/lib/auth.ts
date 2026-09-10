@@ -1,4 +1,6 @@
-import { timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import { eq } from "drizzle-orm";
+import { db, schema } from "@/db";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
@@ -65,4 +67,50 @@ export function hasShortcutToken(req: NextRequest): boolean {
   const a = Buffer.from(token);
   const b = Buffer.from(expected);
   return a.length === b.length && timingSafeEqual(a, b);
+}
+
+// ---- Device tokens (native apps) -------------------------------------------
+// A phone or watch can't hold a browser cookie comfortably, and sharing the one
+// SHORTCUT_API_TOKEN across devices means one leak revokes everything. Each
+// device mints its own token with the PIN; only the hash is stored.
+
+export function hashToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+export function mintDeviceToken(name: string): { id: number; token: string } {
+  const token = `tally_${randomBytes(32).toString("base64url")}`;
+  const row = db.insert(schema.deviceTokens).values({ name: name.trim().slice(0, 60) || "device", tokenHash: hashToken(token) }).returning().get();
+  return { id: row.id, token };
+}
+
+export function listDeviceTokens(): { id: number; name: string; createdAt: string; lastSeenAt: string | null }[] {
+  return db
+    .select({ id: schema.deviceTokens.id, name: schema.deviceTokens.name, createdAt: schema.deviceTokens.createdAt, lastSeenAt: schema.deviceTokens.lastSeenAt })
+    .from(schema.deviceTokens)
+    .all();
+}
+
+export function revokeDeviceToken(id: number): boolean {
+  return db.delete(schema.deviceTokens).where(eq(schema.deviceTokens.id, id)).run().changes > 0;
+}
+
+function bearer(req: NextRequest): string {
+  const header = req.headers.get("authorization") ?? "";
+  return header.startsWith("Bearer ") ? header.slice(7) : "";
+}
+
+export function hasDeviceToken(req: NextRequest): boolean {
+  const token = bearer(req);
+  if (!token.startsWith("tally_")) return false;
+  const row = db.select().from(schema.deviceTokens).where(eq(schema.deviceTokens.tokenHash, hashToken(token))).get();
+  if (!row) return false;
+  db.update(schema.deviceTokens).set({ lastSeenAt: new Date().toISOString() }).where(eq(schema.deviceTokens.id, row.id)).run();
+  return true;
+}
+
+/** The one auth check for user-facing API routes: browser cookie, minted device token, or the legacy Shortcut token. */
+export async function authorized(req: NextRequest): Promise<boolean> {
+  if (bearer(req)) return hasDeviceToken(req) || hasShortcutToken(req);
+  return isAuthenticated();
 }
