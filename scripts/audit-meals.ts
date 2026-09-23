@@ -41,6 +41,7 @@ async function loadMeals(): Promise<Meal[]> {
   // curl-style cookie jar → Cookie header
   const jar = readFileSync(args.cookie, "utf8")
     .split("\n")
+    .map((l) => l.replace(/^#HttpOnly_/, "")) // curl marks httpOnly cookies with this prefix
     .filter((l) => l && !l.startsWith("#"))
     .map((l) => l.split("\t"))
     .filter((c) => c.length >= 7)
