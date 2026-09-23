@@ -26,6 +26,12 @@ jobs:
           command_timeout: 20m
           script: |
             set -e
+            # Paused via the "Pause or resume" workflow: pull the code but
+            # leave the container down.
+            if [ -f /opt/drillbook/.paused ]; then
+              cd /opt/drillbook && git pull origin main
+              echo "drillbook is paused — skipping build/restart"; exit 0
+            fi
             cd /opt/drillbook
             git pull origin main
             cd /opt/fieldhouse

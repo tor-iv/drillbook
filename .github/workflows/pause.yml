@@ -1,0 +1,41 @@
+# Pause / resume the running app without SSH access from a laptop.
+# Pause: backs the DB up to /root on the box, stops the container, and drops
+# a /opt/drillbook/.paused marker that makes deploy.yml a no-op until resume.
+name: Pause or resume
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "stop or start"
+        required: true
+        default: stop
+        type: choice
+        options: [stop, start]
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        with:
+          host: ${{ secrets.HETZNER_IP }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          fingerprint: ${{ secrets.SSH_HOST_FINGERPRINT }}
+          command_timeout: 10m
+          script: |
+            set -e
+            cd /opt/fieldhouse
+            if [ "${{ inputs.action }}" = "stop" ]; then
+              STAMP=$(date +%F)
+              docker compose exec -T drillbook node -e "require('/app/node_modules/better-sqlite3')('/app/data/drillbook.db').backup('/app/data/backup-'+process.argv[1]+'.db').then(()=>console.log('backup ok'))" "$STAMP" || echo "backup skipped (container not running?)"
+              CID=$(docker compose ps -q drillbook || true)
+              [ -n "$CID" ] && docker cp "$CID:/app/data/backup-$STAMP.db" "/root/drillbook-backup-$STAMP.db" && ls -la "/root/drillbook-backup-$STAMP.db"
+              touch /opt/drillbook/.paused
+              docker compose stop drillbook
+            else
+              rm -f /opt/drillbook/.paused
+              docker compose up -d drillbook
+            fi
+            docker compose ps drillbook
